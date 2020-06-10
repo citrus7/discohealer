@@ -1,0 +1,13 @@
+## Interface: 11304
+## Title: DiscoHealer
+## Notes: Tiered raid frames for healers
+## Author: Jonathan Wu
+## Version: 1.0
+
+libs\LibHealComm-4.0\LibHealComm-4.0.xml
+libs\LibCombatLogHealth-1.0\LibCombatLogHealth-1.0.lua
+libs\LibThreatClassic2\lib.xml
+
+frameDisplayLib.lua
+threatLib.lua
+main.lua

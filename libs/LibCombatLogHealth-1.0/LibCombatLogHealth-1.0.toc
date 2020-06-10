@@ -1,0 +1,9 @@
+## Interface: 80205
+
+## Title: LibCombatLogHealth-1.0
+## Version: 1.11
+## Author: d87
+
+## X-Curse-Project-ID: 50001
+
+LibCombatLogHealth-1.0.lua

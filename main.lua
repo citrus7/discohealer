@@ -3,33 +3,42 @@ LibCLHealth = LibStub("LibCombatLogHealth-1.0")
 ThreatLib = LibStub:GetLibrary("LibThreatClassic2")
 
 local function main()
-    discoMainFrame = generateMainDiscoFrame()
+    local discoSettings = {
+        frameSize=1,
+        leftClickAction = "cast"
+    }
 
+    discoMainFrame = generateMainDiscoFrame(discoSettings)
     guidToUid = HealComm:GetGUIDUnitMapTable()
     discoSubframes = {}
     discoOverlaySubframes = {}
-    unitThreatList = {}
+    allPartyMembers = {}
+    unitTargetList = {}
+    unitTargetThrottle = GetTime()
     priorityList = {}
     healcommCallbacks = {}
     playerTarget = "target"
     framesNeedUpdate = true
 
-    generateDiscoSubframes(discoSubframes, discoOverlaySubframes, discoMainFrame)
+    generateDiscoSubframes(discoSubframes, discoOverlaySubframes, discoMainFrame, discoSettings)
 
     local eventHandlers = {}
 
     -- Handler for Unit Health changes
+    --[[
     function eventHandlers:UNIT_HEALTH(unitId)
-        refreshThreat(discoOverlaySubframes, unitThreatList)
-        removeExpiredThreat(discoOverlaySubframes, unitThreatList)
+        updateTargetListFull(discoOverlaySubframes, unitTargetList)
+        removeExpiredThreat(discoOverlaySubframes, unitTargetList)
     end
+    ]]
 
     -- Handler for party changes
     function eventHandlers:GROUP_ROSTER_UPDATE()
+        allPartyMembers = getAllPartyUnitIDs()
         if InCombatLockdown() then
             framesNeedUpdate = true
         else
-            recreateAllSubFrames(discoSubframes, discoOverlaySubframes, discoMainFrame)
+            recreateAllSubFrames(discoSubframes, discoOverlaySubframes, discoMainFrame, discoSettings, allPartyMembers)
         end
     end
 
@@ -38,24 +47,22 @@ local function main()
         discoMainFrame.texture:SetAlpha(0.1)
         if framesNeedUpdate then
             framesNeedUpdate = false
-            recreateAllSubFrames(discoSubframes, discoOverlaySubframes, discoMainFrame)
+            recreateAllSubFrames(discoSubframes, discoOverlaySubframes, discoMainFrame, discoSettings, allPartyMembers)
         end
-        -- Todo
-        --clearThreat(discoOverlaySubframes, unitThreatList)
     end
 
     -- Handler for enter combat
     function eventHandlers:PLAYER_REGEN_DISABLED()
-        --updateThreatListFull(discoOverlaySubframes, unitThreatList)
         discoMainFrame.texture:SetAlpha(0.2)
     end
 
     -- Raid group updated
     function eventHandlers:RAID_TARGET_UPDATE()
+        allPartyMembers = getAllPartyUnitIDs()
         if InCombatLockdown() then
             framesNeedUpdate = true
         else
-            recreateAllSubFrames(discoSubframes, discoOverlaySubframes, discoMainFrame)
+            recreateAllSubFrames(discoSubframes, discoOverlaySubframes, discoMainFrame, discoSettings, allPartyMembers)
         end
     end
 
@@ -74,26 +81,36 @@ local function main()
     end
 
     function eventHandlers:PLAYER_ENTERING_WORLD()
+        allPartyMembers = getAllPartyUnitIDs()
         if InCombatLockdown() then
             framesNeedUpdate = true
         else
-            recreateAllSubFrames(discoSubframes, discoOverlaySubframes, discoMainFrame)
+            recreateAllSubFrames(discoSubframes, discoOverlaySubframes, discoMainFrame, discoSettings, allPartyMembers)
         end
-        clearThreat(discoOverlaySubframes, unitThreatList)
+        clearThreat(discoOverlaySubframes, unitTargetList)
     end
 
     -- Combat log event for threat
     function eventHandlers:COMBAT_LOG_EVENT_UNFILTERED()
         local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags = CombatLogGetCurrentEventInfo()
 
+        local currentTime = GetTime()
+        if currentTime - unitTargetThrottle > 0.2 then
+            updateTargetListFull(allPartyMembers, discoOverlaySubframes, unitTargetList)
+            removeExpiredThreat(discoOverlaySubframes, unitTargetList)
+            unitTargetThrottle = currentTime
+        end
+
+        --[[
+        if sourceName == "Treenewbank" then
+            print(subevent)
+            discoOverlaySubframes["player"].castAnimation:SetDuration(1.5)
+            discoOverlaySubframes["player"].castAnimationGroup:Play()
+        end
+        ]]
+
         if subevent == "UNIT_DIED" then
-            removeThreat(destGUID, discoOverlaySubframes, unitThreatList)
-        else
-            if (strsplit("-",destGUID)) == "Creature" then
-                updateThreatListCombat(destGUID, discoOverlaySubframes, unitThreatList)
-            elseif (strsplit("-",sourceGUID)) == "Creature" then
-                updateThreatListCombat(sourceGUID, discoOverlaySubframes, unitThreatList)
-            end
+            removeThreat(destGUID, discoOverlaySubframes, unitTargetList)
         end
     end
 
@@ -110,12 +127,38 @@ local function main()
         local guidToUid = HealComm:GetGUIDUnitMapTable()
         for i=1, select("#", ...) do
             local playerGuid = select(i, ...)
-            unitId = guidToUid[playerGuid]
-            if unitId and discoSubframes[unitId] then
-                updateHealthForUid(unitId, discoSubframes, priorityList)
+            targetID = guidToUid[playerGuid]
+            if targetID and discoSubframes[targetID] then
+                updateHealthForUid(targetID, discoSubframes, priorityList)
+
+                -- Update cast bar
+                casterId = guidToUid[casterGUID]
+                if casterId and UnitIsPlayer(casterId) then
+                    local name, rank, icon, castTime, minRange, maxRange = GetSpellInfo(spellID)
+                    discoOverlaySubframes[targetID].castAnimation:SetDuration(castTime/1000)
+                    discoOverlaySubframes[targetID].castAnimationGroup:Play()
+                end
             end
         end
     end
+
+    -- Healcomm incoming heal function
+        function healcommCallbacks:HealStopped(event, casterGUID, spellID, spellType, endTime, ...)
+            local guidToUid = HealComm:GetGUIDUnitMapTable()
+            for i=1, select("#", ...) do
+                local playerGuid = select(i, ...)
+                targetID = guidToUid[playerGuid]
+                if targetID and discoSubframes[targetID] then
+                    updateHealthForUid(targetID, discoSubframes, priorityList)
+    
+                    -- Update cast bar
+                    casterId = guidToUid[casterGUID]
+                    if casterId and UnitIsPlayer(casterId) then
+                        discoOverlaySubframes[targetID].castAnimationGroup:Stop()
+                    end
+                end
+            end
+        end
 
     -- Initialize combat health
     LibCLHealth.RegisterCallback(discoMainFrame, "COMBAT_LOG_HEALTH", function(event, unitId, eventType)
@@ -126,6 +169,7 @@ local function main()
 
     -- Initialize Healcomm
     HealComm.RegisterCallback(healcommCallbacks, "HealComm_HealStarted", "HealStarted")
+    HealComm.RegisterCallback(healcommCallbacks, "HealComm_HealStopped", "HealStopped")
     
 end
 
@@ -150,8 +194,6 @@ function updatePriorityList(unitId, priorityList)
     local newPriority = calculatePriority(unitId)
     local add, remove
     local inRange = select(1, UnitInRange(unitId)) or unitId == "player"
-
-    raidIndex = string.match (unitId, "%d+")
 
     -- Check if already in priority list
     local addedFlag = false
@@ -210,10 +252,8 @@ function updateHealthForUid(unitId, subframes, priorityList)
         end
     else
         local _, remove = updatePriorityList(unitId, priorityList)
-        if remove then
-            subframes[remove]:setHidden()
-        end
         local found = false
+        -- See if unit in priorityList
         for _, v in pairs(priorityList) do
             if unitId == v.unitId then
                 subframes[unitId]:SetAlpha(1)
@@ -222,6 +262,10 @@ function updateHealthForUid(unitId, subframes, priorityList)
         end
         if not found then
             subframes[unitId]:setHidden()
+        end
+        -- Hide any frames that were removed from priority list
+        if remove then
+            subframes[remove]:setHidden()
         end
     end
 end
@@ -242,16 +286,16 @@ function updateSubframeHealth(unitId, subframes)
     subframes[unitId].healBar:SetMinMaxValues(0,UnitHealthMax(unitId))
     subframes[unitId].healBar:SetValue(healAmount + unitHealth)
 
-    if ratio < 0.01 then
+    if healthRatio < 0.01 then
         -- Unit dead
         subframes[unitId].texture:SetColorTexture(0.4, 0.4, 0.4)
         subframes[unitId].alpha = subframes[unitId].defaultAlpha
     elseif healthRatio < 0.25 then
         subframes[unitId].texture:SetColorTexture(1, 0, 0)
-        subframes[unitId].alpha = 0.3
+        subframes[unitId].alpha = 0.7
     elseif healthRatio < 0.5 then
         subframes[unitId].texture:SetColorTexture(1, 0.5, 0)
-        subframes[unitId].alpha = 0.2
+        subframes[unitId].alpha = 0.4
     elseif healthRatio < 0.75 then
         subframes[unitId].texture:SetColorTexture(1, 1, 0)
         subframes[unitId].alpha = subframes[unitId].defaultAlpha
@@ -268,6 +312,33 @@ function updateSubframeHealth(unitId, subframes)
     end
 end
 
+-- Get a list of all party/raid unitIDs
+function getAllPartyUnitIDs()
+    local partySize = GetNumGroupMembers()
+    local allGroupIDs = {"player"}
+    for i=1, partySize do
+        key = "raid" .. i
+        pkey = "raidpet" .. i
+        if UnitExists(key) then
+            allGroupIDs[#allGroupIDs+1] = key
+        end
+        if UnitExists(pkey) then
+            allGroupIDs[#allGroupIDs+1] = pkey
+        end
+    end
+    for i=1, min(5, partySize) do
+        key = "party" .. i
+        pkey = "partypet" .. i
+        if UnitExists(key) then
+            allGroupIDs[#allGroupIDs+1] = key
+        end
+        if UnitExists(pkey) then
+            allGroupIDs[#allGroupIDs+1] = key
+        end
+    end
+    return allGroupIDs
+end
+
 -- Update raid subframes
 -- add and remove are both unitIDs
 function updateRaidSubframes(add, remove, subframes)
@@ -277,95 +348,6 @@ function updateRaidSubframes(add, remove, subframes)
 
     if remove ~= nil then
         subframes[remove]:setHidden()
-    end
-end
-
--- Redraw all the subframes when the party changes
-function recreateAllSubFrames(subframes, overlayFrames, mainframe)
-    local partySize = GetNumGroupMembers()
-    -- guid to {key, unitIDs}
-    local playerMapping = {[UnitGUID("player")]={key="large1", unitName=UnitName("player"), unitIDs={player=""}}}
-
-    local allKeys = {}
-    for i=1, partySize do
-        allKeys[#allKeys+1] = "raid" .. i
-    end
-    for i=1, min(6, partySize) do
-        allKeys[#allKeys+1] = "party" .. i
-    end
-
-    -- Create player mapping
-    local j,k= 2,1
-    for _, key in pairs(allKeys) do
-        if UnitExists(key) then
-            if playerMapping[UnitGUID(key)] then
-                playerMapping[UnitGUID(key)].unitIDs[key] = ""
-            else
-                local frameKey
-                local index = string.match (key, "%d+")
-                local isRaidMember = string.find(key, "raid")==1
-                local isTank = index and isRaidMember and ((select(10, GetRaidRosterInfo(index))) == "MAINTANK")
-                
-                if j < 6 and (partySize < 6 or isTank) then
-                    frameKey = "large" .. j
-                    j=j+1
-                else
-                    frameKey = k
-                    k=k+1
-                end
-                playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
-            end
-        end
-    end
-
-    -- Update frames for playerMapping
-    for unitGuid, v in pairs(playerMapping) do
-        -- subframes
-        subframes[unitGuid] = subframes[v.key]
-        subframes[v.unitName] = subframes[unitGuid]
-        for unitId, _ in pairs(v.unitIDs) do
-            subframes[unitId] = subframes[unitGuid]
-            subframes[v.key]:SetAttribute("unit", unitId)
-        end
-        --subframes[v.key]:SetAttribute("unit", v.unitName)
-        subframes[v.key].text:SetText(v.unitName)
-        subframes[v.key]:Show()
-        subframes[v.key]:setHidden()
-        --overlayFrames
-        overlayFrames[unitGuid] = overlayFrames[v.key]
-        overlayFrames[v.unitName] = overlayFrames[unitGuid]
-        for unitId, _ in pairs(v.unitIDs) do
-            overlayFrames[unitId] = overlayFrames[unitGuid]
-        end
-        overlayFrames[v.key]:Show()
-    end
-
-    -- Hide unused subframes
-    for i=k, 40 do
-        subframes[i]:Hide()
-        overlayFrames[i]:Hide()
-    end
-    for i=j, 5 do
-        subframes["large" .. i]:Hide()
-        overlayFrames["large" .. i]:Hide()
-    end
-
-    resizeMainFrame(k, mainframe)
-end
-
--- Resize the main disco healer frame
--- This function can only be called out of combat
-function resizeMainFrame(nextFrame, mainframe)
-    if nextFrame == 1 then
-        discoMainFrame:SetSize(500, 30)
-    elseif nextFrame <12 then
-        discoMainFrame:SetSize(500, 52)
-    elseif nextFrame < 22 then
-        discoMainFrame:SetSize(500, 78)
-    elseif nextFrame < 32 then
-        discoMainFrame:SetSize(500, 104)
-    else
-        discoMainFrame:SetSize(500, 130)
     end
 end
 

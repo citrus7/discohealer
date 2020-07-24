@@ -6,4 +6,7 @@
 
 ## X-Curse-Project-ID: 50001
 
+LibStub\LibStub.lua
+CallbackHandler-1.0\CallbackHandler-1.0.lua
+
 LibCombatLogHealth-1.0.lua

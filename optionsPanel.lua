@@ -14,6 +14,15 @@ DiscoHealerOptionsPanel.panel.name = "DiscoHealer";
 DiscoHealerOptionsPanel.panel.refresh = function() 
     DiscoHealerOptionsPanel.tempSettings = DiscoSettings
 
+    DiscoHealerOptionsPanel.panel.slider:SetValue(DiscoHealerOptionsPanel.tempSettings.frameSize)
+    UIDropDownMenu_SetText(DiscoHealerOptionsPanel.panel.actionSelector, DiscoHealerOptionsPanel.tempSettings.clickAction)
+    DiscoHealerOptionsPanel.panel.spellSelect.box1:SetText(DiscoHealerOptionsPanel.tempSettings.leftMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box2:SetText(DiscoHealerOptionsPanel.tempSettings.rightMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box3:SetText(DiscoHealerOptionsPanel.tempSettings.shiftLMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box4:SetText(DiscoHealerOptionsPanel.tempSettings.shiftRMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box5:SetText(DiscoHealerOptionsPanel.tempSettings.ctrlLMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box6:SetText(DiscoHealerOptionsPanel.tempSettings.ctrlRMacro)
+
     if not InCombatLockdown() then
         if DiscoSettings.clickAction == "target" then
             DiscoHealerOptionsPanel.panel.spellSelect:Hide()
@@ -57,6 +66,7 @@ DiscoHealerOptionsPanel.panel.default = function()
         leftMacro = "",
         rightMacro = "",
     }
+    DiscoHealerOptionsPanel.panel.refresh()
 end
 InterfaceOptions_AddCategory(DiscoHealerOptionsPanel.panel);
 

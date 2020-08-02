@@ -164,9 +164,15 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
 
         if not subframes[key].healBar then subframes[key].healBar = CreateFrame("StatusBar", nil, subframes[key]); end
         subframes[key].healBar:SetFrameStrata("MEDIUM")
-        subframes[key].healBar:SetFrameLevel(100)
+        subframes[key].healBar:SetFrameLevel(150)
         subframes[key].healBar:SetPoint("CENTER", subframes[key], "CENTER", 0, 0)
         subframes[key].healBar:SetStatusBarTexture(0.2,0.6,1)
+
+        if not subframes[key].playerHealBar then subframes[key].playerHealBar = CreateFrame("StatusBar", nil, subframes[key]); end
+        subframes[key].playerHealBar:SetFrameStrata("MEDIUM")
+        subframes[key].playerHealBar:SetFrameLevel(100)
+        subframes[key].playerHealBar:SetPoint("CENTER", subframes[key], "CENTER", 0, 0)
+        subframes[key].playerHealBar:SetStatusBarTexture(0,0.9,0.7)
 
         if not subframes[key].textFrame then subframes[key].textFrame = CreateFrame("FRAME", "DiscoRaidTextSubFrame"..key, subframes[key]); end
         subframes[key].textFrame:SetFrameStrata("MEDIUM")
@@ -181,6 +187,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key].texture:SetSize(97*fs, 22*fs)
             subframes[key].healthBar:SetSize(97*fs, 22*fs)
             subframes[key].healBar:SetSize(97*fs, 22*fs)
+            subframes[key].playerHealBar:SetSize(97*fs, 22*fs)
             --drawHealthbarLines(subframes[key].healthBarBorder, 97*fs, 22*fs)
 
             subframes[key].defaultAlpha = 0.2
@@ -191,6 +198,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key].texture:SetSize(47*fs, 22*fs)
             subframes[key].healthBar:SetSize(47*fs, 22*fs)
             subframes[key].healBar:SetSize(47*fs, 22*fs)
+            subframes[key].playerHealBar:SetSize(47*fs, 22*fs)
             --drawHealthbarLines(subframes[key].healthBarBorder, 47*fs, 22*fs)
             subframes[key].text:SetAlpha(0.7)
             subframes[key].text:SetFont("GameFontNormal", 30)
@@ -242,6 +250,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].targeted:SetStatusBarTexture(0.9,0.9,0.9)
         subframes[key].targeted:SetAlpha(0)
 
+        --[[
         if not subframes[key].castbar then subframes[key].castbar = CreateFrame("STATUSBAR", nil, subframes[key]); end
         subframes[key].castbar:SetAllPoints(subframes[key])
         subframes[key].castbar:SetFrameStrata("HIGH")
@@ -249,31 +258,31 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].castbar:SetAlpha(0.3)
         subframes[key].castbar:SetMinMaxValues(0,100)
         subframes[key].castbar:SetValue(0)
-
-        --[[
-        if not subframes[key].castBarFrame then subframes[key].castBarFrame = CreateFrame("FRAME", "DiscoRaidCastBarSubFrame"..key, subframes[key]); end
-
-        if not subframes[key].castAnimationGroup then subframes[key].castAnimationGroup = subframes[key].castBarFrame:CreateAnimationGroup(); end
-        subframes[key].castAnimationGroup:SetLooping("NONE")
-        subframes[key].castAnimationGroup:SetScript("OnPlay", function(self)
-            self.castBar:SetAlpha(0.3)
-        end)
-        subframes[key].castAnimationGroup:SetScript("OnStop", function(self)
-            self.castBar:SetAlpha(0)
-        end)
-        subframes[key].castAnimationGroup:SetScript("OnFinished", function(self)
-            self.castBar:SetAlpha(0)
-        end)
-
-        if not subframes[key].castAnimationGroup.castBar then subframes[key].castAnimationGroup.castBar = subframes[key].castBarFrame:CreateTexture(nil, "HIGH"); end
-        subframes[key].castAnimationGroup.castBar:SetPoint("CENTER", subframes[key], "LEFT", 0, 0)
-        subframes[key].castAnimationGroup.castBar:SetSize(1*fs, 25*fs)
-        subframes[key].castAnimationGroup.castBar:SetColorTexture(0.9, 0.9, 0.9)
-        subframes[key].castAnimationGroup.castBar:SetAlpha(0)
-
-        if not subframes[key].castAnimation then subframes[key].castAnimation = subframes[key].castAnimationGroup:CreateAnimation("SCALE"); end
-        subframes[key].castAnimation:SetOrigin("LEFT",0,0)
         ]]
+        -- CastBar Animation
+        if not subframes[key].castBarFrame then subframes[key].castBarFrame = CreateFrame("FRAME", "DiscoRaidCastBarSubFrame"..key, subframes[key]); end
+        subframes[key].castBarFrame:SetAllPoints(subframes[key])
+
+        if not subframes[key].castBarFrame.castAnimationGroup then subframes[key].castBarFrame.castAnimationGroup = subframes[key].castBarFrame:CreateAnimationGroup(); end
+        subframes[key].castBarFrame.castAnimationGroup:SetLooping("NONE")
+        subframes[key].castBarFrame.castAnimationGroup:SetScript("OnPlay", function(self)
+            self.castbar:SetAlpha(0.3)
+        end)
+        subframes[key].castBarFrame.castAnimationGroup:SetScript("OnStop", function(self)
+            self.castbar:SetAlpha(0)
+        end)
+        subframes[key].castBarFrame.castAnimationGroup:SetScript("OnFinished", function(self)
+            self.castbar:SetAlpha(0)
+        end)
+
+        if not subframes[key].castBarFrame.castAnimationGroup.castbar then subframes[key].castBarFrame.castAnimationGroup.castbar = subframes[key].castBarFrame:CreateTexture(nil, "HIGH"); end
+        subframes[key].castBarFrame.castAnimationGroup.castbar:SetPoint("CENTER", subframes[key].castBarFrame, "LEFT", 0, 0)
+        subframes[key].castBarFrame.castAnimationGroup.castbar:SetSize(1*fs, 25*fs)
+        subframes[key].castBarFrame.castAnimationGroup.castbar:SetColorTexture(0.9, 0.9, 0.9)
+        subframes[key].castBarFrame.castAnimationGroup.castbar:SetAlpha(0)
+
+        if not subframes[key].castBarFrame.castAnimation then subframes[key].castBarFrame.castAnimation = subframes[key].castBarFrame.castAnimationGroup:CreateAnimation("SCALE"); end
+        subframes[key].castBarFrame.castAnimation:SetOrigin("LEFT",0,0)
 
         if frameType == "large" then
             subframes[key]:SetSize(100*fs, 25*fs)
@@ -281,14 +290,14 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key].targeted:SetSize(100*fs, 3.5*fs)
             subframes[key].threatAlphaMedium = 0.75
             subframes[key].threatAlphaHigh = 0.75
-            --subframes[key].castAnimation:SetScale(100,1)
+            subframes[key].castBarFrame.size = 100
         else
             subframes[key]:SetSize(50*fs, 25*fs)
             subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*50*fs, math.floor((i-0.1)/10)*-25*fs-30*fs)
             subframes[key].targeted:SetSize(50*fs, 3.5*fs)
             subframes[key].threatAlphaMedium = 0.15
             subframes[key].threatAlphaHigh = 0.75
-            --subframes[key].castAnimation:SetScale(50,1)
+            subframes[key].castBarFrame.size = 50
         end
 
         subframes[key].target = function(self)
@@ -366,10 +375,10 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
             subframes[v.key].classTexture:SetColorTexture(classRGB.r, classRGB.g, classRGB.b)
             subframes[v.key].text:SetTextColor(classRGB.r, classRGB.g, classRGB.b)
             -- Set Attributes
-            subframes[v.key].leftClick:SetAttribute("target", unitId)
+            subframes[v.key].leftClick:SetAttribute("unit", unitId)
             if DiscoSettings.clickAction == "target" then
                 subframes[v.key].leftClick:SetAttribute("type", "target")
-                subframes[v.key].leftClick:SetAttribute("unit", unitId)
+                --subframes[v.key].leftClick:SetAttribute("unit", unitId)
             elseif DiscoSettings.clickAction == "spell" then
                 subframes[v.key].leftClick:SetAttribute("type", "macro")
                 local macroText = generateMacroText(unitId)
@@ -482,10 +491,9 @@ end
 -- This function can only be called out of combat
 function resizeMainFrame(nextFrame, mainframe)
     local fs = DiscoSettings.frameSize
-
     if DiscoSettings.minimized then
         mainframe:SetSize(100*fs, 28*fs)
-    elseif nextFrame < 6 then
+    elseif nextFrame < 7 then
         mainframe:SetSize(100*(nextFrame-1)*fs, 28*fs)
     elseif nextFrame <12 then
         mainframe:SetSize(500*fs, 56*fs)
@@ -519,19 +527,5 @@ function getClassColorRGB(className)
         return {r=0.78, g=0.61, b=0.43}
     else
         return {r=0.5, g=1.00, b=0.5}
-    end
-end
-
--- startCastBar plays a castbar animation
-function UpdateCastBar(castbar)
-    currentTime  = GetTime()
-    if currentTime > discoVars.playerCastTimer or discoVars.castPercent > 99 then
-        castbar:SetValue(0)
-        discoVars.castPercent = 0
-        discoVars.castTicker:Cancel()
-    else
-        local nextPercent = discoVars.castPercent + (100 - discoVars.castPercent) / ((discoVars.playerCastTimer - currentTime) / 0.01)
-        discoVars.castPercent = nextPercent
-        castbar:SetValue(nextPercent)
     end
 end

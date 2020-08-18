@@ -15,7 +15,15 @@ DiscoHealerOptionsPanel.panel.refresh = function()
     DiscoHealerOptionsPanel.tempSettings = DiscoSettings
 
     DiscoHealerOptionsPanel.panel.slider:SetValue(DiscoHealerOptionsPanel.tempSettings.frameSize)
-    UIDropDownMenu_SetText(DiscoHealerOptionsPanel.panel.actionSelector, DiscoHealerOptionsPanel.tempSettings.clickAction)
+
+
+    if DiscoHealerOptionsPanel.tempSettings.clickAction == "target" then
+        UIDropDownMenu_SetText(DiscoHealerOptionsPanel.panel.actionSelector, "Target Player")
+    else
+        UIDropDownMenu_SetText(DiscoHealerOptionsPanel.panel.actionSelector, "Cast On Player")
+    end
+
+
     DiscoHealerOptionsPanel.panel.spellSelect.box1:SetText(DiscoHealerOptionsPanel.tempSettings.leftMacro)
     DiscoHealerOptionsPanel.panel.spellSelect.box2:SetText(DiscoHealerOptionsPanel.tempSettings.rightMacro)
     DiscoHealerOptionsPanel.panel.spellSelect.box3:SetText(DiscoHealerOptionsPanel.tempSettings.shiftLMacro)
@@ -99,7 +107,7 @@ function generateOptionsPanel()
     --  Cast Time Lookahead
     DiscoHealerOptionsPanel.panel.CastLookaheadTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", 0, -125)
-    DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetText("Display Friendly Heals landing in X Seconds")
+    DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetText("Display Friendly Heals landing within X Seconds")
     
     DiscoHealerOptionsPanel.panel.CastLookaheadBox = CreateFrame("EditBox", "DiscoLookAheadBox", DiscoHealerOptionsPanel.panel, "InputBoxTemplate")
     DiscoHealerOptionsPanel.panel.CastLookaheadBox:SetSize(50,20)
@@ -110,8 +118,8 @@ function generateOptionsPanel()
 
     -- Action Dropdown Selector
     DiscoHealerOptionsPanel.panel.actionTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    DiscoHealerOptionsPanel.panel.actionTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", 0, -175)
-    DiscoHealerOptionsPanel.panel.actionTitle:SetText("Action")
+    DiscoHealerOptionsPanel.panel.actionTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", 0, -185)
+    DiscoHealerOptionsPanel.panel.actionTitle:SetText("Frame On Click Behavior")
 
     DiscoHealerOptionsPanel.panel.actionSelector = CreateFrame("BUTTON", "DiscoActionDropdownMenu", DiscoHealerOptionsPanel.panel, "UIDropDownMenuTemplate")
     DiscoHealerOptionsPanel.panel.actionSelector:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -75, -225)
@@ -134,15 +142,10 @@ function generateOptionsPanel()
                     end
                 end
             end
-            info.text, info.checked, info.func = "target", DiscoHealerOptionsPanel.tempSettings.clickAction == "target", function() select("target"); end
+            info.text, info.checked, info.func = "Target Player", DiscoHealerOptionsPanel.tempSettings.clickAction == "target", function() select("target"); end
             UIDropDownMenu_AddButton(info)
-            info.text, info.checked, info.func = "spell", DiscoHealerOptionsPanel.tempSettings.clickAction == "spell", function() select("spell"); end
+            info.text, info.checked, info.func = "Cast On Player", DiscoHealerOptionsPanel.tempSettings.clickAction == "spell", function() select("spell"); end
             UIDropDownMenu_AddButton(info)
-            -- Macro may be removed as a casting option
-            --[[
-            info.text, info.checked, info.func = "macro", DiscoHealerOptionsPanel.tempSettings.clickAction == "macro", function() select("macro"); end
-            UIDropDownMenu_AddButton(info)
-            ]]
         end
     end
 

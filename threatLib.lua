@@ -1,11 +1,16 @@
 -- Track enemies from every single party member
-function updateTargetListFull(allPartyMembers, overlayFrames, unitThreatList)
-    for _,v in pairs(allPartyMembers) do
-        updateTargetedList(v.."target", overlayFrames, unitThreatList)
+-- TODO: This function has been moved to main
+--[[
+local function updateTargetListFull(allPartyMembers, overlayFrames, unitThreatList)
+    for i=1, #allPartyMembers do
+        updateTargetedList(allPartyMembers[i].."target", overlayFrames, unitThreatList)
     end
 end
+]]
 
+-- TODO: This function has been moved to main
 -- Track targets to see if friendly units are targeted
+--[[
 function updateTargetedList(enemyId, overlayFrames, unitThreatList)
     -- make sure targeted unit exists and is an enemy
     if not (UnitExists(enemyId) and UnitIsEnemy("player", enemyId)) then
@@ -31,6 +36,7 @@ function updateTargetedList(enemyId, overlayFrames, unitThreatList)
         unitThreatList[enemyGuid] = nil
     end
 end
+]]
 
 -- Iterates mob list and updates threat
 function refreshThreat(overlayFrames, unitThreatList)
@@ -58,6 +64,7 @@ function updateThreatListCombat(enemyGUID, overlayFrames, unitThreatList)
     end
 end
 
+--[[
 function removeExpiredThreat(overlayFrames, unitThreatList)
     for guid, val in pairs(unitThreatList) do
         if (time() - val.timestamp) > 3 then
@@ -65,6 +72,7 @@ function removeExpiredThreat(overlayFrames, unitThreatList)
         end
     end
 end
+]]
 
 -- Check if unitGUID in threat list and clear threat
 function removeThreat(unitGUID, overlayFrames, unitThreatList)

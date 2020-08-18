@@ -178,7 +178,10 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].textFrame:SetFrameStrata("MEDIUM")
         subframes[key].textFrame:SetFrameLevel(400)
         if not subframes[key].text then subframes[key].text = subframes[key].textFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal"); end
+        if not subframes[key].subtext then subframes[key].subtext = subframes[key].textFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); end
         subframes[key].text:SetPoint("BOTTOM", subframes[key], "TOP", 0, -17*fs)
+        subframes[key].subtext:SetPoint("BOTTOM", subframes[key], "TOP", 0, -23*fs)
+        subframes[key].subtext:SetTextColor(0.8, 0.8, 0.8)
 
         if frameType == "large" then
             subframes[key]:SetSize(100*fs, 25*fs)
@@ -190,7 +193,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key].playerHealBar:SetSize(97*fs, 22*fs)
             --drawHealthbarLines(subframes[key].healthBarBorder, 97*fs, 22*fs)
 
-            subframes[key].defaultAlpha = 0.2
+            subframes[key].defaultAlpha = 0.1
         else
             subframes[key]:SetSize(50*fs, 25*fs)
             subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*50*fs, math.floor((i-0.1)/10)*-25*fs-30*fs)
@@ -201,13 +204,13 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key].playerHealBar:SetSize(47*fs, 22*fs)
             --drawHealthbarLines(subframes[key].healthBarBorder, 47*fs, 22*fs)
             subframes[key].text:SetAlpha(0.7)
-            subframes[key].text:SetFont("GameFontNormal", 30)
+            subframes[key].subtext:SetAlpha(0.7)
             
             if not DiscoSettings.showNames then
                 subframes[key].text:Hide()
             end
 
-            subframes[key].defaultAlpha = 0.05
+            subframes[key].defaultAlpha = 0.025
         end
 
         -- Frame alpha settings
@@ -250,15 +253,12 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].targeted:SetStatusBarTexture(0.9,0.9,0.9)
         subframes[key].targeted:SetAlpha(0)
 
-        --[[
-        if not subframes[key].castbar then subframes[key].castbar = CreateFrame("STATUSBAR", nil, subframes[key]); end
-        subframes[key].castbar:SetAllPoints(subframes[key])
-        subframes[key].castbar:SetFrameStrata("HIGH")
-        subframes[key].castbar:SetStatusBarTexture(0.9, 0.9, 0.9)
-        subframes[key].castbar:SetAlpha(0.3)
-        subframes[key].castbar:SetMinMaxValues(0,100)
-        subframes[key].castbar:SetValue(0)
-        ]]
+        if not subframes[key].resurrect then subframes[key].resurrect = subframes[key]:CreateTexture(nil, "BORDER"); end
+        subframes[key].resurrect:SetTexture("Interface/AddOns/DiscoHealer/assets/ankh.tga")
+        subframes[key].resurrect:SetSize(18*fs, 18*fs)
+        subframes[key].resurrect:SetPoint("CENTER", subframes[key], "CENTER", 0, -2*fs)
+        subframes[key].resurrect:SetAlpha(0)
+
         -- CastBar Animation
         if not subframes[key].castBarFrame then subframes[key].castBarFrame = CreateFrame("FRAME", "DiscoRaidCastBarSubFrame"..key, subframes[key]); end
         subframes[key].castBarFrame:SetAllPoints(subframes[key])
@@ -318,7 +318,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
     end
 
     -- Generate all large and regular subframes
-    for i=1, 40 do
+    for i=1, 50 do
         createSubFrame(i, subframes, nil)
         createSubFrameOverlay(i, overlaySubframes, nil)
     end
@@ -337,6 +337,7 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
     subframes["large1"].text:SetText(UnitName("player"))
     -- Create player mapping
     local j,k= 2,1
+    local pets = {}
     for _, key in pairs(allPartyMembers) do
         if not string.find(key, "pet") then
             if playerMapping[UnitGUID(key)] then
@@ -354,12 +355,25 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
                 else
                     frameKey = k
                     k=k+1
-                    maxStrLength = DiscoSettings.frameSize * 6
+                    maxStrLength = DiscoSettings.frameSize * 5
                     nameSubStr = string.sub(UnitName(key), 0, maxStrLength)
                     subframes[frameKey].text:SetText(nameSubStr)
                 end
                 playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
             end
+        else
+            pets[#pets+1] = key
+        end 
+    end
+    -- TODO
+    if DiscoSettings.showPets then
+        for _, key in pairs(pets) do
+            frameKey = k
+            k=k+1
+            maxStrLength = DiscoSettings.frameSize * 6
+            nameSubStr = string.sub(UnitName(key), 0, maxStrLength)
+            subframes[frameKey].text:SetText(nameSubStr)
+            playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
         end
     end
 
@@ -388,8 +402,8 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
         if not DiscoSettings.minimized then
             subframes[v.key]:Show()
         end
-        subframes[v.key]:SetHidden()
-        --overlayFrames
+        --subframes[v.key]:SetHidden()
+        -- OverlayFrames
         overlayFrames[unitGuid] = overlayFrames[v.key]
         overlayFrames[v.unitName] = overlayFrames[unitGuid]
         for unitId, _ in pairs(v.unitIDs) do
@@ -401,7 +415,7 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
     end
 
     -- Hide unused subframes
-    for i=k, 40 do
+    for i=k, 50 do
         subframes[i]:Hide()
         overlayFrames[i]:Hide()
     end
@@ -439,7 +453,6 @@ function drawHealthbarLines(frame, width, height)
     midLine:SetStartPoint("TOPLEFT",width/2,0)
     midLine:SetEndPoint("BOTTOMLEFT",width/2,height/2)
 
-    
     for i=1,7 do
         if i ~= 4 then
             local tick = frame:CreateLine()
@@ -449,26 +462,48 @@ function drawHealthbarLines(frame, width, height)
             tick:SetEndPoint("BOTTOMLEFT",width/(8/i),height/1.5)
         end
     end
-    
-
 end
 
 -- Create Macro Text for frames
 function generateMacroText(targetId)
-    --local macroText = "/cast [@" .. targetId .. ",help,exists,nodead,btn:2,modifier:ctrl] Blessing Of Protection; [@" .. targetId .. ",help,exists,nodead,btn:1] Flash Of Light(rank 4); [@" .. targetId .. ",help,exists,nodead,btn:2] Flash Of Light(rank 6)"
-    local macroText = "/cast [@" .. targetId .. ",help,exists,nodead,btn:1,modifier:ctrl] "
-    macroText = macroText .. DiscoSettings.ctrlLMacro .. "; [@" .. targetId .. ",help,exists,nodead,btn:2,modifier:ctrl] "
-    macroText = macroText .. DiscoSettings.ctrlRMacro .. "; [@" .. targetId .. ",help,exists,nodead,btn:1,modifier:shift] "
-    macroText = macroText .. DiscoSettings.shiftLMacro .. "; [@" .. targetId .. ",help,exists,nodead,btn:2,modifier:shift] "
-    macroText = macroText .. DiscoSettings.shiftRMacro .. "; [@" .. targetId .. ",help,exists,nodead,btn:1] "
-    macroText = macroText .. DiscoSettings.leftMacro .. "; [@" .. targetId .. ",help,exists,nodead,btn:2] "
-    macroText = macroText .. DiscoSettings.rightMacro .. ";"
+    local macroText = ""
 
+    if DiscoSettings.leftMacro == "target" then
+        macroText = macroText .. "/target [@" .. targetId .. ",btn:1,nomodifier];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetId .. ",help,exists,nodead,btn:1,nomodifier] " .. DiscoSettings.leftMacro .. ";\n"
+    end
 
-    --macroText = macroText .. " /cast [@" .. targetId .. ",help,exists,nodead,btn:1] Flash Of Light(rank 1);"
-    --local macroText = "/cast "
-    --local macroText = macroText .. 
-    
+    if DiscoSettings.rightMacro == "target" then
+        macroText = macroText .. "/target [@" .. targetId .. ",btn:2,nomodifier];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetId .. ",help,exists,nodead,btn:2,nomodifier] " .. DiscoSettings.rightMacro .. ";\n"
+    end
+
+    if DiscoSettings.ctrlLMacro == "target" then
+        macroText = macroText .. "/target [@" .. targetId .. ",btn:1,modifier:ctrl];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetId .. ",help,exists,nodead,btn:1,modifier:ctrl] " .. DiscoSettings.ctrlLMacro .. ";\n"
+    end
+
+    if DiscoSettings.ctrlRMacro == "target" then
+        macroText = macroText .. "/target [@" .. targetId .. ",btn:2,modifier:ctrl];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetId .. ",help,exists,nodead,btn:2,modifier:ctrl] " .. DiscoSettings.ctrlRMacro .. ";\n"
+    end
+
+    if DiscoSettings.shiftLMacro == "target" then
+        macroText = macroText .. "/target [@" .. targetId .. ",btn:1,modifier:shift];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetId .. ",help,exists,nodead,btn:1,modifier:shift] " .. DiscoSettings.shiftLMacro .. ";\n"
+    end
+
+    if DiscoSettings.shiftRMacro == "target" then
+        macroText = macroText .. "/target [@" .. targetId .. ",btn:2,modifier:shift];"
+    else
+        macroText = macroText .. "/cast [@" .. targetId .. ",help,exists,nodead,btn:2,modifier:shift] " .. DiscoSettings.shiftRMacro .. ";"
+    end
+
     return macroText
 end
 
@@ -487,8 +522,7 @@ function minimizeFrames(mainframe, subframes, overlayFrames)
     mainframe:SetSize(100*fs, 28*fs)
 end
 
--- Resize the main disco healer frame
--- This function can only be called out of combat
+-- Resize the main DiscoHealer frame
 function resizeMainFrame(nextFrame, mainframe)
     local fs = DiscoSettings.frameSize
     if DiscoSettings.minimized then
@@ -496,13 +530,15 @@ function resizeMainFrame(nextFrame, mainframe)
     elseif nextFrame < 7 then
         mainframe:SetSize(100*(nextFrame-1)*fs, 28*fs)
     elseif nextFrame <12 then
-        mainframe:SetSize(500*fs, 56*fs)
+        mainframe:SetSize(500*fs, 54*fs)
     elseif nextFrame < 22 then
-        mainframe:SetSize(500*fs, 82*fs)
+        mainframe:SetSize(500*fs, 80*fs)
     elseif nextFrame < 32 then
-        mainframe:SetSize(500*fs, 108*fs)
+        mainframe:SetSize(500*fs, 106*fs)
+    elseif nextFrame < 42 then
+        mainframe:SetSize(500*fs, 132*fs)
     else
-        mainframe:SetSize(500*fs, 134*fs)
+        mainframe:SetSize(500*fs, 158*fs)
     end
 end
 
@@ -526,6 +562,6 @@ function getClassColorRGB(className)
     elseif className == "WARRIOR" then
         return {r=0.78, g=0.61, b=0.43}
     else
-        return {r=0.5, g=1.00, b=0.5}
+        return {r=0.5, g=0.5, b=0.5}
     end
 end

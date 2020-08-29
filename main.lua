@@ -15,6 +15,7 @@ local IsSpellInRange = IsSpellInRange;
 local UnitDetailedThreatSituation = UnitDetailedThreatSituation;
 local UnitIsCharmed = UnitIsCharmed;
 local UnitCanAttack = UnitCanAttack;
+local UnitClassification = UnitClassification;
 local UnitName = UnitName;
 local UnitIsEnemy = UnitIsEnemy;
 local UnitIsTrivial = UnitIsTrivial;
@@ -105,6 +106,11 @@ end
 
 -- Perform all health bar, texture color, alpha, and priority queue updates
 local function updateHealthForUID(unitId, subframes, priorityList, playerTargetGUID, playerCastTime)
+    if subframes[unitId]==nil then
+        --print("Error, updateSubframeHealth called on nonexistant unitID: ", unitId)
+        return
+    end
+
     local fs = DiscoSettings.frameSize or 1
     -- Update subframe health
     local currentTime = GetTime()
@@ -124,11 +130,6 @@ local function updateHealthForUID(unitId, subframes, priorityList, playerTargetG
     local newPriority = (1 - (healAmount + unitHealth) / maxHealth) * 1000
     if newPriority < 1 then
         newPriority = 0
-    end
-
-    if subframes[unitId]==nil then
-        --print("Error, updateSubframeHealth called on nonexistant unitID: ", unitId)
-        return
     end
 
     -- Update priority list
@@ -169,7 +170,7 @@ local function updateHealthForUID(unitId, subframes, priorityList, playerTargetG
 
     -- Player, Maintanks, and CastTarget always displayed if in range, and are separate from priority list
     local index = string.match (unitId, "%d+")
-    if UnitIsUnit(unitId, "player") or (isActiveCastTarget or select(10, GetRaidRosterInfo(index)) == "MAINTANK") and inRange then
+    if UnitIsUnit(unitId, "player") or (isActiveCastTarget or index and select(10, GetRaidRosterInfo(index)) == "MAINTANK") and inRange then
         --local priority = calculatePriority(unitId, playerTargetGUID, playerCastTime)
         if healthRatio > 0.999 then
             subframes[unitId].alpha = subframes[unitId].defaultAlpha
@@ -194,17 +195,17 @@ local function updateHealthForUID(unitId, subframes, priorityList, playerTargetG
     end
 
     if not inRange then
-        subframes[unitId]:SetAlpha(subframes[unitId].defaultAlpha)
-    else
-        subframes[unitId]:SetHidden()
+        subframes[unitId].alpha = subframes[unitId].defaultAlpha
     end
+    subframes[unitId]:SetHidden()
+
 end
 
 -- Sweep through all party members and update health
 -- Called every 10s to clean up
 local function updateHealthFull(allPartyMembers, subframes, priorityList, playerTargetGUID, playerCastTime)
     for i=1, #allPartyMembers do
-        if not string.find(allPartyMembers[i], "pet") then
+        if not string.find(allPartyMembers[i], "pet") or DiscoSettings.showPets then
             updateHealthForUID(allPartyMembers[i], subframes, priorityList, playerTargetGUID, playerCastTime)
         end
     end
@@ -221,7 +222,7 @@ local function getAllPartyUnitIDs()
         if UnitExists(key) then
             allGroupIDs[#allGroupIDs+1] = key
         end
-        if UnitExists(pkey) then
+        if UnitIsVisible(pkey) then
             allGroupIDs[#allGroupIDs+1] = pkey
         end
     end
@@ -231,11 +232,11 @@ local function getAllPartyUnitIDs()
         if UnitExists(key) then
             allGroupIDs[#allGroupIDs+1] = key
         end
-        if UnitExists(pkey) then
+        if UnitIsVisible(pkey) then
             allGroupIDs[#allGroupIDs+1] = pkey
         end
     end
-    if UnitExists("pet") then
+    if UnitIsVisible("pet") then
         allGroupIDs[#allGroupIDs+1] = "pet"
     end
     return allGroupIDs
@@ -293,26 +294,26 @@ local function removeExpiredThreat(overlayFrames, unitThreatList)
 end
 
 -- Track targets to see if friendly units are targeted
-local function updateTargetedList(enemyId, overlayFrames, unitThreatList)
+local function updateTargetedList(enemyID, overlayFrames, unitThreatList)
     -- make sure targeted unit exists and is an enemy
-    if not (UnitExists(enemyId) and UnitIsEnemy("player", enemyId)) then
+    if not (UnitExists(enemyID) and UnitIsEnemy("player", enemyID)) then
         return
     end
+    local enemyGuid = UnitGUID(enemyID)
+    local targetedFriendlyGUID = UnitGUID(enemyID .. "target")
 
-    local enemyGuid = UnitGUID(enemyId)
-    local targetedFriendlyGUID = UnitGUID(enemyId .. "target")
-
-    -- enemy target changed
+    -- Enemy target has changed
     if unitThreatList[enemyGuid] and unitThreatList[enemyGuid].threatGuid ~= targetedFriendlyGUID then
         overlayFrames[unitThreatList[enemyGuid].threatGuid].threatFrame:SetAlpha(0)
+        overlayFrames[unitThreatList[enemyGuid].threatGuid].bossThreatFrame:SetAlpha(0)
     end
 
     if targetedFriendlyGUID and overlayFrames[targetedFriendlyGUID] then
-        unitThreatList[enemyGuid] = {enemyName=UnitName(enemyId), friendlyName=UnitName(enemyId.."target"), threatGuid=targetedFriendlyGUID, timestamp=GetTime()}
-        if UnitInRange(UnitName(enemyId.."target")) then
-            overlayFrames[targetedFriendlyGUID]:setThreatHigh()
+        unitThreatList[enemyGuid] = {enemyName=UnitName(enemyID), friendlyName=UnitName(enemyID.."target"), threatGuid=targetedFriendlyGUID, timestamp=GetTime()}
+        if UnitClassification(enemyID) ~= "worldboss" then
+            overlayFrames[targetedFriendlyGUID].threatFrame:SetAlpha(0.75)
         else
-            overlayFrames[targetedFriendlyGUID]:setThreatMedium()
+            overlayFrames[targetedFriendlyGUID].bossThreatFrame:SetAlpha(0.75)
         end
     else
         unitThreatList[enemyGuid] = nil
@@ -365,6 +366,7 @@ local function main()
     discoVars.discoSubframes = {}
     discoVars.discoOverlaySubframes = {}
     discoVars.allPartyMembers = {}
+    discoVars.playerMapping = {}
     unitTargetList = {}
     unitTargetThrottle = 0
     priorityList = {}
@@ -386,12 +388,13 @@ local function main()
     -- INIT function for DiscoHealer
     function eventHandlers:ADDON_LOADED(addonName)
         if addonName == "DiscoHealer" then
+            -- DEFAULT SETTINGS
             if DiscoSettings == nil then
                 DiscoSettings = {
                     frameSize=1,
                     showNames=true,
-                    showPets=true,
-                    castLookAhead=2,
+                    showPets=false,
+                    castLookAhead=4,
                     minimized=false,
                     clickAction = "target",
                     ctrlLMacro = "",
@@ -421,7 +424,15 @@ local function main()
         if InCombatLockdown() or discoHealerLoaded == false then
             framesNeedUpdate = true
         else
+            -- untarget current target
+            if discoVars.discoSubframes[playerTarget] then
+                discoVars.discoOverlaySubframes[playerTarget]:untarget()
+            end
             recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
+            -- retarget current target
+            if discoVars.discoSubframes[playerTarget] then
+                discoVars.discoOverlaySubframes[playerTarget]:target()
+            end
         end
     end
 
@@ -430,7 +441,15 @@ local function main()
         discoVars.discoMainFrame.texture:SetAlpha(0.3)
         if framesNeedUpdate then
             framesNeedUpdate = false
+            -- untarget current target
+            if discoVars.discoSubframes[playerTarget] then
+                discoVars.discoOverlaySubframes[playerTarget]:untarget()
+            end
             recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
+            -- retarget current target
+            if discoVars.discoSubframes[playerTarget] then
+                discoVars.discoOverlaySubframes[playerTarget]:target()
+            end
         end
     end
 
@@ -470,12 +489,41 @@ local function main()
         if InCombatLockdown() or discoHealerLoaded == false then
             framesNeedUpdate = true
         else
+            -- untarget current target
+            if discoVars.discoSubframes[playerTarget] then
+                discoVars.discoOverlaySubframes[playerTarget]:untarget()
+            end
             recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
             clearThreat(discoVars.discoOverlaySubframes, unitTargetList)
+            -- retarget current target
+            if discoVars.discoSubframes[playerTarget] then
+                discoVars.discoOverlaySubframes[playerTarget]:target()
+            end
         end
     end
 
-    -- Combat log event for threat
+    function eventHandlers:UNIT_PET()
+        if DiscoSettings.showPets then
+            discoVars.allPartyMembers = getAllPartyUnitIDs()
+            if InCombatLockdown() or discoHealerLoaded == false then
+                framesNeedUpdate = true
+            else
+                -- untarget current target
+                if discoVars.discoSubframes[playerTarget] then
+                    discoVars.discoOverlaySubframes[playerTarget]:untarget()
+                end
+                recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
+                clearThreat(discoVars.discoOverlaySubframes, unitTargetList)
+                -- retarget current target
+                if discoVars.discoSubframes[playerTarget] then
+                    discoVars.discoOverlaySubframes[playerTarget]:target()
+                end
+            end
+        end
+    end
+
+
+    -- Combat log event for enemy targets
     function eventHandlers:COMBAT_LOG_EVENT_UNFILTERED()
         local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags = CombatLogGetCurrentEventInfo()
 
@@ -486,6 +534,7 @@ local function main()
             --discoVars.discoSubframes[destGUID]:SetHidden()
         end
     end
+    
 
     -- Healcomm incoming heal function
     function healcommCallbacks:HealStarted(event, casterGUID, spellID, spellType, endTime, ...)

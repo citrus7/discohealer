@@ -1,13 +1,3 @@
--- Track enemies from every single party member
--- TODO: This function has been moved to main
---[[
-local function updateTargetListFull(allPartyMembers, overlayFrames, unitThreatList)
-    for i=1, #allPartyMembers do
-        updateTargetedList(allPartyMembers[i].."target", overlayFrames, unitThreatList)
-    end
-end
-]]
-
 -- TODO: This function has been moved to main
 -- Track targets to see if friendly units are targeted
 --[[
@@ -78,6 +68,7 @@ end
 function removeThreat(unitGUID, overlayFrames, unitThreatList)
     if unitThreatList[unitGUID] then
         overlayFrames[unitThreatList[unitGUID].threatGuid].threatFrame:SetAlpha(0)
+        overlayFrames[unitThreatList[unitGUID].threatGuid].bossThreatFrame:SetAlpha(0)
         unitThreatList[unitGUID] = nil
     end
 end

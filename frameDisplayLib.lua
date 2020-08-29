@@ -185,7 +185,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
 
         if frameType == "large" then
             subframes[key]:SetSize(100*fs, 25*fs)
-            subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*100*fs, -2*fs)
+            subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%5*100*fs, math.floor((i-0.1)/5)*-25*fs-2*fs)
 
             subframes[key].texture:SetSize(97*fs, 22*fs)
             subframes[key].healthBar:SetSize(97*fs, 22*fs)
@@ -196,7 +196,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key].defaultAlpha = 0.1
         else
             subframes[key]:SetSize(50*fs, 25*fs)
-            subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*50*fs, math.floor((i-0.1)/10)*-25*fs-30*fs)
+            subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*50*fs, math.floor((i-0.1)/10)*-25*fs-28*fs)
 
             subframes[key].texture:SetSize(47*fs, 22*fs)
             subframes[key].healthBar:SetSize(47*fs, 22*fs)
@@ -232,7 +232,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         if not subframes[key] then subframes[key] = CreateFrame("FRAME", "DiscoRaidSubFrameOverlay"..key, discoMainFrame); end
         subframes[key]:SetFrameStrata("HIGH")
 
-        if not subframes[key].threatFrame then subframes[key].threatFrame = CreateFrame("FRAME", "DiscoRaidThreatSubFrame"..key, subframes[key]); end
+        if not subframes[key].threatFrame then subframes[key].threatFrame = CreateFrame("FRAME", "DiscoThreatOverlay"..key, subframes[key]); end
         subframes[key].threatFrame:SetPoint("CENTER", subframes[key], "TOPLEFT", 7*fs, -7*fs)
         subframes[key].threatFrame:SetSize(12, 12)
         subframes[key].threatFrame:SetAlpha(0)
@@ -246,6 +246,14 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].textureV:SetAllPoints(subframes[key].threatFrame)
         subframes[key].textureV:SetColorTexture(1,0.2,0.2)
         subframes[key].textureV:SetGradientAlpha("VERTICAL", 1,0.2,0.2,0, 1,0.2,0.2,0.5)
+
+        if not subframes[key].bossThreatFrame then subframes[key].bossThreatFrame = CreateFrame("FRAME", "DiscoBossThreatOverlay"..key, subframes[key]); end
+        subframes[key].bossThreatFrame:SetAllPoints(subframes[key].threatFrame)
+        subframes[key].bossThreatFrame:SetAlpha(0)
+
+        if not subframes[key].bossThreatTexture then subframes[key].bossThreatTexture = subframes[key].bossThreatFrame:CreateTexture(nil, "BACKGROUND"); end
+        subframes[key].bossThreatTexture:SetAllPoints(subframes[key].bossThreatFrame)
+        subframes[key].bossThreatTexture:SetTexture("Interface/AddOns/DiscoHealer/assets/skull.tga")
 
         if not subframes[key].targeted then subframes[key].targeted = CreateFrame("STATUSBAR", nil, subframes[key]); end
         subframes[key].targeted:SetFrameStrata("HIGH")
@@ -286,17 +294,17 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
 
         if frameType == "large" then
             subframes[key]:SetSize(100*fs, 25*fs)
-            subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*100*fs, 0)
+            subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%5*100*fs, math.floor((i-0.1)/5)*-25*fs-2*fs)
             subframes[key].targeted:SetSize(100*fs, 3.5*fs)
             subframes[key].threatAlphaMedium = 0.75
             subframes[key].threatAlphaHigh = 0.75
             subframes[key].castBarFrame.size = 100
         else
             subframes[key]:SetSize(50*fs, 25*fs)
-            subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*50*fs, math.floor((i-0.1)/10)*-25*fs-30*fs)
+            subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*50*fs, math.floor((i-0.1)/10)*-25*fs-25*fs-2*fs)
             subframes[key].targeted:SetSize(50*fs, 3.5*fs)
-            subframes[key].threatAlphaMedium = 0.15
-            subframes[key].threatAlphaHigh = 0.75
+            --subframes[key].threatAlphaMedium = 0.15
+            --subframes[key].threatAlphaHigh = 0.75
             subframes[key].castBarFrame.size = 50
         end
 
@@ -307,23 +315,25 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             self.targeted:SetAlpha(0)
         end
 
+        --[[
         subframes[key].setThreatMedium = function(self)
             self.threatFrame:SetAlpha(self.threatAlphaMedium)
         end
         subframes[key].setThreatHigh = function(self)
             self.threatFrame:SetAlpha(self.threatAlphaHigh)
         end
+        ]]
 
         subframes[key]:SetAlpha(1)
     end
 
     -- Generate all large and regular subframes
-    for i=1, 50 do
+    for i=1, 60 do
         createSubFrame(i, subframes, nil)
         createSubFrameOverlay(i, overlaySubframes, nil)
     end
 
-    for i=1, 5 do
+    for i=1, 10 do
         createSubFrame(i, subframes, "large")
         createSubFrameOverlay(i, overlaySubframes, "large")
     end
@@ -333,52 +343,74 @@ end
 function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembers)
     local partySize = GetNumGroupMembers()
     -- guid to {key, unitIDs}
-    local playerMapping = {[UnitGUID("player")]={key="large1", unitName=UnitName("player"), unitIDs={player=""}}}
+    discoVars.playerMapping = {[UnitGUID("player")]={key="large1", unitName=UnitName("player"), unitIDs={player=""}}}
     subframes["large1"].text:SetText(UnitName("player"))
     -- Create player mapping
     local j,k= 2,1
     local pets = {}
+    -- Find all main tanks
     for _, key in pairs(allPartyMembers) do
         if not string.find(key, "pet") then
-            if playerMapping[UnitGUID(key)] then
-                playerMapping[UnitGUID(key)].unitIDs[key] = ""
-            else
-                local frameKey
-                local index = string.match (key, "%d+")
-                local isRaidMember = string.find(key, "raid")==1
-                local isTank = index and isRaidMember and ((select(10, GetRaidRosterInfo(index))) == "MAINTANK")
-                
-                if j < 6 and (partySize < 6 or isTank) then
+            local framekey
+            local index = string.match (key, "%d+")
+            local isRaidMember = string.find(key, "raid")==1
+            local isTank = index and isRaidMember and ((select(10, GetRaidRosterInfo(index))) == "MAINTANK")
+
+            if partySize < 6 or isTank and j < 11 then
+                if discoVars.playerMapping[UnitGUID(key)] then
+                    discoVars.playerMapping[UnitGUID(key)].unitIDs[key] = ""
+                else
                     frameKey = "large" .. j
                     j=j+1
                     subframes[frameKey].text:SetText(UnitName(key))
-                else
-                    frameKey = k
-                    k=k+1
-                    maxStrLength = DiscoSettings.frameSize * 5
-                    nameSubStr = string.sub(UnitName(key), 0, maxStrLength)
-                    subframes[frameKey].text:SetText(nameSubStr)
+                    discoVars.playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
                 end
-                playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
+            end
+        end
+    end
+
+    if j > 6 then k = 11; end
+
+    -- Find all regular party members and pets
+    for _, key in pairs(allPartyMembers) do
+        if not string.find(key, "pet") then
+            if discoVars.playerMapping[UnitGUID(key)] then
+                discoVars.playerMapping[UnitGUID(key)].unitIDs[key] = ""
+            else
+                local frameKey = k
+                k=k+1
+                maxStrLength = DiscoSettings.frameSize * 5
+                nameSubStr = string.sub(UnitName(key), 0, maxStrLength)
+                subframes[frameKey].text:SetText(nameSubStr)
+
+                discoVars.playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
             end
         else
             pets[#pets+1] = key
         end 
     end
-    -- TODO
+
+    -- Pets
     if DiscoSettings.showPets then
         for _, key in pairs(pets) do
-            frameKey = k
-            k=k+1
-            maxStrLength = DiscoSettings.frameSize * 6
-            nameSubStr = string.sub(UnitName(key), 0, maxStrLength)
-            subframes[frameKey].text:SetText(nameSubStr)
-            playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
+            if discoVars.playerMapping[UnitGUID(key)] then
+                discoVars.playerMapping[UnitGUID(key)].unitIDs[key] = ""
+            else
+                local petName = UnitName(key)
+                if petName then
+                    local frameKey = k
+                    k=k+1
+                    maxStrLength = DiscoSettings.frameSize * 5
+                    nameSubStr = string.sub(petName, 0, maxStrLength)
+                    subframes[frameKey].text:SetText(nameSubStr)
+                    discoVars.playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
+                end
+            end
         end
     end
 
     -- Update frames for playerMapping
-    for unitGuid, v in pairs(playerMapping) do
+    for unitGuid, v in pairs(discoVars.playerMapping) do
         -- subframes
         subframes[unitGuid] = subframes[v.key]
         subframes[v.unitName] = subframes[unitGuid]
@@ -402,7 +434,6 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
         if not DiscoSettings.minimized then
             subframes[v.key]:Show()
         end
-        --subframes[v.key]:SetHidden()
         -- OverlayFrames
         overlayFrames[unitGuid] = overlayFrames[v.key]
         overlayFrames[v.unitName] = overlayFrames[unitGuid]
@@ -415,51 +446,32 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
     end
 
     -- Hide unused subframes
-    for i=k, 50 do
+    for i=k, 60 do
         subframes[i]:Hide()
         overlayFrames[i]:Hide()
     end
-    for i=j, 5 do
+    for i=j, 10 do
         subframes["large" .. i]:Hide()
         overlayFrames["large" .. i]:Hide()
     end
 
-    resizeMainFrame(math.max(k,j), mainframe)
+    resizeMainFrame(k, j, mainframe)
 end
 
--- Currently unused
-function drawHealthbarLines(frame, width, height)
-    local leftBorder = frame:CreateLine()
-    leftBorder:SetColorTexture(0,0,0)
-    leftBorder:SetThickness(1)
-    leftBorder:SetStartPoint("TOPLEFT",0,0)
-    leftBorder:SetEndPoint("BOTTOMLEFT",0,0)
-
-    local rightBorder = frame:CreateLine()
-    rightBorder:SetColorTexture(0,0,0)
-    rightBorder:SetThickness(1)
-    rightBorder:SetStartPoint("TOPRIGHT",0,0)
-    rightBorder:SetEndPoint("BOTTOMRIGHT",0,0)
-
-    local topBorder = frame:CreateLine()
-    topBorder:SetColorTexture(0,0,0)
-    topBorder:SetThickness(1)
-    topBorder:SetStartPoint("TOPLEFT",0,0)
-    topBorder:SetEndPoint("TOPRIGHT",0,0)
-
-    local midLine = frame:CreateLine()
-    midLine:SetColorTexture(0,0,0)
-    midLine:SetThickness(1)
-    midLine:SetStartPoint("TOPLEFT",width/2,0)
-    midLine:SetEndPoint("BOTTOMLEFT",width/2,height/2)
-
-    for i=1,7 do
-        if i ~= 4 then
-            local tick = frame:CreateLine()
-            tick:SetColorTexture(0,0,0)
-            tick:SetThickness(1)
-            tick:SetStartPoint("TOPLEFT",width/(8/i),0)
-            tick:SetEndPoint("BOTTOMLEFT",width/(8/i),height/1.5)
+-- Reassign macro attributes
+-- TODO: currently unused
+function reassignAttributes(subframes, overlayFrames, playerMapping)
+    -- Update frames for playerMapping
+    for unitGuid, v in playerMapping do
+        for unitId, _ in pairs(v.unitIDs) do
+            subframes[v.key].leftClick:SetAttribute("unit", unitId)
+            if DiscoSettings.clickAction == "target" then
+                subframes[v.key].leftClick:SetAttribute("type", "target")
+            elseif DiscoSettings.clickAction == "spell" then
+                subframes[v.key].leftClick:SetAttribute("type", "macro")
+                local macroText = generateMacroText(unitId)
+                subframes[v.key].leftClick:SetAttribute("macrotext", macroText)
+            end
         end
     end
 end
@@ -523,22 +535,15 @@ function minimizeFrames(mainframe, subframes, overlayFrames)
 end
 
 -- Resize the main DiscoHealer frame
-function resizeMainFrame(nextFrame, mainframe)
+function resizeMainFrame(nextFrameSmall, nextFrameLarge, mainframe)
     local fs = DiscoSettings.frameSize
+    local frameWidth = math.max(math.min(100*(nextFrameLarge-1), 500), math.min(500, 50*(nextFrameSmall-1))) * fs
+    local frameHeight = (28 + (math.ceil((nextFrameSmall-1)/10) * 26))*fs
+
     if DiscoSettings.minimized then
         mainframe:SetSize(100*fs, 28*fs)
-    elseif nextFrame < 7 then
-        mainframe:SetSize(100*(nextFrame-1)*fs, 28*fs)
-    elseif nextFrame <12 then
-        mainframe:SetSize(500*fs, 54*fs)
-    elseif nextFrame < 22 then
-        mainframe:SetSize(500*fs, 80*fs)
-    elseif nextFrame < 32 then
-        mainframe:SetSize(500*fs, 106*fs)
-    elseif nextFrame < 42 then
-        mainframe:SetSize(500*fs, 132*fs)
     else
-        mainframe:SetSize(500*fs, 158*fs)
+        mainframe:SetSize(frameWidth, frameHeight)
     end
 end
 

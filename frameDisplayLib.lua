@@ -303,8 +303,6 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key]:SetSize(50*fs, 25*fs)
             subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*50*fs, math.floor((i-0.1)/10)*-25*fs-25*fs-2*fs)
             subframes[key].targeted:SetSize(50*fs, 3.5*fs)
-            --subframes[key].threatAlphaMedium = 0.15
-            --subframes[key].threatAlphaHigh = 0.75
             subframes[key].castBarFrame.size = 50
         end
 
@@ -314,15 +312,6 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].untarget = function(self)
             self.targeted:SetAlpha(0)
         end
-
-        --[[
-        subframes[key].setThreatMedium = function(self)
-            self.threatFrame:SetAlpha(self.threatAlphaMedium)
-        end
-        subframes[key].setThreatHigh = function(self)
-            self.threatFrame:SetAlpha(self.threatAlphaHigh)
-        end
-        ]]
 
         subframes[key]:SetAlpha(1)
     end
@@ -340,7 +329,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
 end
 
 -- Redraw all the subframes when the party changes
-function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembers)
+function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembers, playerTarget)
     local partySize = GetNumGroupMembers()
     -- guid to {key, unitIDs}
     discoVars.playerMapping = {[UnitGUID("player")]={key="large1", unitName=UnitName("player"), unitIDs={player=""}}}
@@ -409,25 +398,30 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
         end
     end
 
+    -- Untarget current playerTarget
+    if subframes[playerTarget] then
+        overlayFrames[playerTarget]:untarget()
+    end
+
     -- Update frames for playerMapping
     for unitGuid, v in pairs(discoVars.playerMapping) do
         -- subframes
         subframes[unitGuid] = subframes[v.key]
-        subframes[v.unitName] = subframes[unitGuid]
-        for unitId, _ in pairs(v.unitIDs) do
-            subframes[unitId] = subframes[unitGuid]
-            local classFilename, classId = UnitClassBase(unitId)
+        subframes[v.unitName] = subframes[v.key]
+        for unitID, _ in pairs(v.unitIDs) do
+            subframes[unitID] = subframes[unitGuid]
+            local classFilename, classId = UnitClassBase(unitID)
             local classRGB = getClassColorRGB(classFilename)
             subframes[v.key].classTexture:SetColorTexture(classRGB.r, classRGB.g, classRGB.b)
             subframes[v.key].text:SetTextColor(classRGB.r, classRGB.g, classRGB.b)
             -- Set Attributes
-            subframes[v.key].leftClick:SetAttribute("unit", unitId)
+            subframes[v.key].leftClick:SetAttribute("unit", unitID)
             if DiscoSettings.clickAction == "target" then
                 subframes[v.key].leftClick:SetAttribute("type", "target")
-                --subframes[v.key].leftClick:SetAttribute("unit", unitId)
+                --subframes[v.key].leftClick:SetAttribute("unit", unitID)
             elseif DiscoSettings.clickAction == "spell" then
                 subframes[v.key].leftClick:SetAttribute("type", "macro")
-                local macroText = generateMacroText(unitId)
+                local macroText = generateMacroText(unitID)
                 subframes[v.key].leftClick:SetAttribute("macrotext", macroText)
             end
         end
@@ -437,8 +431,8 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
         -- OverlayFrames
         overlayFrames[unitGuid] = overlayFrames[v.key]
         overlayFrames[v.unitName] = overlayFrames[unitGuid]
-        for unitId, _ in pairs(v.unitIDs) do
-            overlayFrames[unitId] = overlayFrames[unitGuid]
+        for unitID, _ in pairs(v.unitIDs) do
+            overlayFrames[unitID] = overlayFrames[unitGuid]
         end
         if not DiscoSettings.minimized then
             overlayFrames[v.key]:Show()
@@ -455,6 +449,11 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
         overlayFrames["large" .. i]:Hide()
     end
 
+    -- retarget current target
+    if subframes[playerTarget] then
+        overlayFrames[playerTarget]:target()
+    end
+
     resizeMainFrame(k, j, mainframe)
 end
 
@@ -462,14 +461,14 @@ end
 -- TODO: currently unused
 function reassignAttributes(subframes, overlayFrames, playerMapping)
     -- Update frames for playerMapping
-    for unitGuid, v in playerMapping do
-        for unitId, _ in pairs(v.unitIDs) do
-            subframes[v.key].leftClick:SetAttribute("unit", unitId)
+    for unitGuid, v in pairs(playerMapping) do
+        for unitID, _ in pairs(v.unitIDs) do
+            subframes[v.key].leftClick:SetAttribute("unit", unitID)
             if DiscoSettings.clickAction == "target" then
                 subframes[v.key].leftClick:SetAttribute("type", "target")
             elseif DiscoSettings.clickAction == "spell" then
                 subframes[v.key].leftClick:SetAttribute("type", "macro")
-                local macroText = generateMacroText(unitId)
+                local macroText = generateMacroText(unitID)
                 subframes[v.key].leftClick:SetAttribute("macrotext", macroText)
             end
         end

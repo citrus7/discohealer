@@ -53,24 +53,24 @@ end
 ]]
 
 -- Maintain priority queue
-local function updatePriorityList(unitId, priorityList, newPriority)
+local function updatePriorityList(unitID, priorityList, newPriority)
     local queueSize = 5
     -- Calculate Priority
     local add, remove
-    local inRange = select(1, UnitInRange(unitId)) or UnitIsUnit(unitId, "player")
+    local inRange = select(1, UnitInRange(unitID)) or UnitIsUnit(unitID, "player")
 
     -- Check if already in priority list
     local addedFlag = false
     for i=1, #priorityList do
-        if priorityList[i].unitId == unitId then
+        if priorityList[i].unitID == unitID then
             -- Remove dead and full health units
             if newPriority<1 or newPriority>999 or not inRange then
-                remove = priorityList[i].unitId
+                remove = priorityList[i].unitID
                 priorityList[i] = nil
             -- Update priority
             else
-                add = priorityList[i].unitId
-                priorityList[i] = {priority=newPriority, unitId=unitId}
+                add = priorityList[i].unitID
+                priorityList[i] = {priority=newPriority, unitID=unitID}
             end
             addedFlag = true
         end
@@ -82,8 +82,8 @@ local function updatePriorityList(unitId, priorityList, newPriority)
     end
 
     if addedFlag == false and inRange then
-        add = unitId
-        priorityList[#priorityList+1] = {priority=newPriority, unitId=unitId}
+        add = unitID
+        priorityList[#priorityList+1] = {priority=newPriority, unitID=unitID}
     end
 
     if #priorityList > 1 then
@@ -96,7 +96,7 @@ local function updatePriorityList(unitId, priorityList, newPriority)
             return a.priority > b.priority
         end)
         if #priorityList == queueSize+1 then
-            remove = priorityList[queueSize+1].unitId
+            remove = priorityList[queueSize+1].unitID
             priorityList[queueSize+1] = nil
         end
     end
@@ -105,109 +105,118 @@ local function updatePriorityList(unitId, priorityList, newPriority)
 end
 
 -- Perform all health bar, texture color, alpha, and priority queue updates
-local function updateHealthForUID(unitId, subframes, priorityList, playerTargetGUID, playerCastTime)
-    if subframes[unitId]==nil then
-        --print("Error, updateSubframeHealth called on nonexistant unitID: ", unitId)
+local function updateHealthForUID(unitID, subframes, priorityList, playerTargetGUID, playerCastTime)
+    if subframes[unitID]==nil then
+        print("Error, updateSubframeHealth called on nonexistant unitID: ", unitID)
         return
     end
 
     local fs = DiscoSettings.frameSize or 1
+    local subframe = subframes[UnitGUID(unitID)]
     -- Update subframe health
     local currentTime = GetTime()
     local healTimer = currentTime + DiscoSettings.castLookAhead
-    local isActiveCastTarget = playerTargetGUID == UnitGUID(unitId) and currentTime < playerCastTime
+    local isActiveCastTarget = playerTargetGUID == UnitGUID(unitID) and currentTime < playerCastTime
     -- Use playerCastTime instead of lookahead if active target
     if isActiveCastTarget then
         healTimer = playerCastTime + 0.1
     end
-    local unitGUID = UnitGUID(unitId)
+    local unitGUID = UnitGUID(unitID)
     local healAmount = (HealComm:GetOthersHealAmount(unitGUID, HealComm.ALL_HEALS, healTimer) or 0) * HealComm:GetHealModifier(unitGUID)
     local playerHealAmount = healAmount + (HealComm:GetHealAmount(unitGUID, HealComm.ALL_HEALS, playerCastTime, UnitGUID("player")) or 0) * HealComm:GetHealModifier(unitGUID)
-    local unitHealth = LibCLHealth.UnitHealth(unitId)
-    local maxHealth = UnitHealthMax(unitId)
+    local unitHealth = LibCLHealth.UnitHealth(unitID)
+    local maxHealth = UnitHealthMax(unitID)
     local healthRatio = unitHealth/maxHealth
-    local inRange = select(1, UnitInRange(unitId)) or UnitIsUnit(unitId, "player")
+    local inRange = select(1, UnitInRange(unitID)) or UnitIsUnit(unitID, "player")
     local newPriority = (1 - (healAmount + unitHealth) / maxHealth) * 1000
     if newPriority < 1 then
         newPriority = 0
     end
 
     -- Update priority list
-    --local _, remove = updatePriorityList(unitId, priorityList, newPriority)
-    updatePriorityList(unitId, priorityList, newPriority)
+    local _, remove = updatePriorityList(unitID, priorityList, newPriority)
+    --updatePriorityList(unitID, priorityList, newPriority)
 
-    subframes[unitId].healthBar:SetMinMaxValues(0, maxHealth)
-    subframes[unitId].healthBar:SetValue(unitHealth)
-    subframes[unitId].healBar:SetMinMaxValues(0, maxHealth)
-    subframes[unitId].healBar:SetValue(healAmount + unitHealth)
-    subframes[unitId].playerHealBar:SetMinMaxValues(0, maxHealth)
-    subframes[unitId].playerHealBar:SetValue(playerHealAmount + unitHealth)
+    subframe.healthBar:SetMinMaxValues(0, maxHealth)
+    subframe.healthBar:SetValue(unitHealth)
+    subframe.healBar:SetMinMaxValues(0, maxHealth)
+    subframe.healBar:SetValue(healAmount + unitHealth)
+    subframe.playerHealBar:SetMinMaxValues(0, maxHealth)
+    subframe.playerHealBar:SetValue(playerHealAmount + unitHealth)
 
     if healthRatio > 0.66 then
-        subframes[unitId].alpha = subframes[unitId].defaultAlpha
-        subframes[unitId].texture:SetColorTexture(0.2, 0.2, 0.2)
+        subframe.alpha = subframe.defaultAlpha
+        subframe.texture:SetColorTexture(0.2, 0.2, 0.2)
     elseif healthRatio > 0.33 then
-        subframes[unitId].alpha = subframes[unitId].defaultAlpha
-        subframes[unitId].texture:SetColorTexture(0.8, 0.4, 0)
-    elseif not UnitIsDeadOrGhost(unitId) then
-        subframes[unitId].alpha = subframes[unitId].defaultAlpha
-        subframes[unitId].texture:SetColorTexture(0.8, 0, 0)
+        subframe.alpha = subframe.defaultAlpha
+        subframe.texture:SetColorTexture(0.8, 0.4, 0)
+    elseif not UnitIsDeadOrGhost(unitID) then
+        subframe.alpha = subframe.defaultAlpha
+        subframe.texture:SetColorTexture(0.8, 0, 0)
     else
         -- Unit is dead
-        subframes[unitId].texture:SetColorTexture(0.2, 0.2, 0.2)
-        subframes[unitId].alpha = 0.30
-        subframes[unitId].subtext:SetText("(Dead)")
-        subframes[unitId].text:SetPoint("BOTTOM", subframes[unitId], "TOP", 0, -14*fs)
-        subframes[unitId].healBar:SetValue(0)
-        subframes[unitId].healthBar:SetValue(0)
-        subframes[unitId].playerHealBar:SetValue(0)
+        subframe.texture:SetColorTexture(0.2, 0.2, 0.2)
+        subframe.alpha = 0.30
+        subframe.subtext:SetText("(Dead)")
+        subframe.text:SetPoint("BOTTOM", subframe, "TOP", 0, -14*fs)
+        subframe.healBar:SetValue(0)
+        subframe.healthBar:SetValue(0)
+        subframe.playerHealBar:SetValue(0)
         return
     end
 
     -- No need to check unit alive because of return
-    subframes[unitId].subtext:SetText("")
-    subframes[unitId].text:SetPoint("BOTTOM", subframes[unitId], "TOP", 0, -17*fs)
+    subframe.subtext:SetText("")
+    subframe.text:SetPoint("BOTTOM", subframe, "TOP", 0, -17*fs)
 
     -- Player, Maintanks, and CastTarget always displayed if in range, and are separate from priority list
-    local index = string.match (unitId, "%d+")
-    if UnitIsUnit(unitId, "player") or (isActiveCastTarget or index and select(10, GetRaidRosterInfo(index)) == "MAINTANK") and inRange then
-        --local priority = calculatePriority(unitId, playerTargetGUID, playerCastTime)
+    local index = string.match (unitID, "%d+")
+    if UnitIsUnit(unitID, "player") or (isActiveCastTarget or index and select(10, GetRaidRosterInfo(index)) == "MAINTANK") and inRange then
+        --local priority = calculatePriority(unitID, playerTargetGUID, playerCastTime)
         if healthRatio > 0.999 then
-            subframes[unitId].alpha = subframes[unitId].defaultAlpha
-        elseif not UnitIsDeadOrGhost(unitId) then
-            subframes[unitId].alpha = 1
+            subframe.alpha = subframe.defaultAlpha
+        elseif not UnitIsDeadOrGhost(unitID) then
+            subframe.alpha = 1
         end
-        subframes[unitId]:SetHidden()
+        subframe:SetHidden()
         return
     end
 
     -- Hide any frames that were removed from priority list
-    --[[
     if remove and UnitGUID(remove) ~= playerTargetGUID then
-        subframes[remove]:SetHidden()
+        subframe.alpha = subframe.defaultAlpha
+        subframe:SetHidden()
     end
-    ]]
+    
     -- See if unit in priorityList
     for i=1, #priorityList do
-        if unitId == priorityList[i].unitId then
-            subframes[unitId].alpha = 1
+        if unitID == priorityList[i].unitID then
+            subframe.alpha = 1
         end
     end
 
     if not inRange then
-        subframes[unitId].alpha = subframes[unitId].defaultAlpha
+        subframe.alpha = subframe.defaultAlpha
     end
-    subframes[unitId]:SetHidden()
+    subframe:SetHidden()
 
 end
 
 -- Sweep through all party members and update health
 -- Called every 10s to clean up
-local function updateHealthFull(allPartyMembers, subframes, priorityList, playerTargetGUID, playerCastTime)
+local function updateHealthFull(allPartyMembers, subframes, overlayFrames, mainFrame, priorityList, playerTargetGUID, playerCastTime)
+    local framesNeedUpdate = false
     for i=1, #allPartyMembers do
         if not string.find(allPartyMembers[i], "pet") or DiscoSettings.showPets then
+            if not subframes[UnitGUID(allPartyMembers[i])] then
+                print("Need update")
+                framesNeedUpdate = true
+            end
             updateHealthForUID(allPartyMembers[i], subframes, priorityList, playerTargetGUID, playerCastTime)
         end
+    end
+    if framesNeedUpdate and not InCombatLockdown() then
+        recreateAllSubFrames(subframes, overlayFrames, mainFrame, allPartyMembers)
     end
 end
 
@@ -299,24 +308,24 @@ local function updateTargetedList(enemyID, overlayFrames, unitThreatList)
     if not (UnitExists(enemyID) and UnitIsEnemy("player", enemyID)) then
         return
     end
-    local enemyGuid = UnitGUID(enemyID)
+    local enemyGUID = UnitGUID(enemyID)
     local targetedFriendlyGUID = UnitGUID(enemyID .. "target")
 
     -- Enemy target has changed
-    if unitThreatList[enemyGuid] and unitThreatList[enemyGuid].threatGuid ~= targetedFriendlyGUID then
-        overlayFrames[unitThreatList[enemyGuid].threatGuid].threatFrame:SetAlpha(0)
-        overlayFrames[unitThreatList[enemyGuid].threatGuid].bossThreatFrame:SetAlpha(0)
+    if unitThreatList[enemyGUID] and unitThreatList[enemyGUID].threatGuid ~= targetedFriendlyGUID then
+        overlayFrames[unitThreatList[enemyGUID].threatGuid].threatFrame:SetAlpha(0)
+        overlayFrames[unitThreatList[enemyGUID].threatGuid].bossThreatFrame:SetAlpha(0)
     end
 
     if targetedFriendlyGUID and overlayFrames[targetedFriendlyGUID] then
-        unitThreatList[enemyGuid] = {enemyName=UnitName(enemyID), friendlyName=UnitName(enemyID.."target"), threatGuid=targetedFriendlyGUID, timestamp=GetTime()}
+        unitThreatList[enemyGUID] = {enemyName=UnitName(enemyID), friendlyName=UnitName(enemyID.."target"), threatGuid=targetedFriendlyGUID, timestamp=GetTime()}
         if UnitClassification(enemyID) ~= "worldboss" then
             overlayFrames[targetedFriendlyGUID].threatFrame:SetAlpha(0.75)
         else
             overlayFrames[targetedFriendlyGUID].bossThreatFrame:SetAlpha(0.75)
         end
     else
-        unitThreatList[enemyGuid] = nil
+        unitThreatList[enemyGUID] = nil
     end
 end
 
@@ -424,15 +433,7 @@ local function main()
         if InCombatLockdown() or discoHealerLoaded == false then
             framesNeedUpdate = true
         else
-            -- untarget current target
-            if discoVars.discoSubframes[playerTarget] then
-                discoVars.discoOverlaySubframes[playerTarget]:untarget()
-            end
-            recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
-            -- retarget current target
-            if discoVars.discoSubframes[playerTarget] then
-                discoVars.discoOverlaySubframes[playerTarget]:target()
-            end
+            recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers, playerTarget)
         end
     end
 
@@ -441,15 +442,7 @@ local function main()
         discoVars.discoMainFrame.texture:SetAlpha(0.3)
         if framesNeedUpdate then
             framesNeedUpdate = false
-            -- untarget current target
-            if discoVars.discoSubframes[playerTarget] then
-                discoVars.discoOverlaySubframes[playerTarget]:untarget()
-            end
             recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
-            -- retarget current target
-            if discoVars.discoSubframes[playerTarget] then
-                discoVars.discoOverlaySubframes[playerTarget]:target()
-            end
         end
     end
 
@@ -489,16 +482,8 @@ local function main()
         if InCombatLockdown() or discoHealerLoaded == false then
             framesNeedUpdate = true
         else
-            -- untarget current target
-            if discoVars.discoSubframes[playerTarget] then
-                discoVars.discoOverlaySubframes[playerTarget]:untarget()
-            end
             recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
             clearThreat(discoVars.discoOverlaySubframes, unitTargetList)
-            -- retarget current target
-            if discoVars.discoSubframes[playerTarget] then
-                discoVars.discoOverlaySubframes[playerTarget]:target()
-            end
         end
     end
 
@@ -508,16 +493,8 @@ local function main()
             if InCombatLockdown() or discoHealerLoaded == false then
                 framesNeedUpdate = true
             else
-                -- untarget current target
-                if discoVars.discoSubframes[playerTarget] then
-                    discoVars.discoOverlaySubframes[playerTarget]:untarget()
-                end
                 recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
                 clearThreat(discoVars.discoOverlaySubframes, unitTargetList)
-                -- retarget current target
-                if discoVars.discoSubframes[playerTarget] then
-                    discoVars.discoOverlaySubframes[playerTarget]:target()
-                end
             end
         end
     end
@@ -619,7 +596,8 @@ local function main()
             removeExpiredThreat(discoVars.discoOverlaySubframes, unitTargetList)
         end
         if checkResetTimer("UPDATE_SLOW", timeDelta, 10) then
-            updateHealthFull(discoVars.allPartyMembers, discoVars.discoSubframes, priorityList, discoVars.castTargetGUID, discoVars.playerCastTimer)
+            discoVars.allPartyMembers = getAllPartyUnitIDs()
+            updateHealthFull(discoVars.allPartyMembers, discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, priorityList, discoVars.castTargetGUID, discoVars.playerCastTimer)
         end
     end
 
@@ -634,9 +612,9 @@ local function main()
     discoVars.discoMainFrame:SetScript("OnUpdate", UpdateFrequent)
 
     -- Initialize combat health
-    LibCLHealth.RegisterCallback(discoVars.discoMainFrame, "COMBAT_LOG_HEALTH", function(event, unitId, eventType)
-        if discoVars.discoSubframes[unitId] then
-            updateHealthForUID(unitId, discoVars.discoSubframes, priorityList, discoVars.castTargetGUID, discoVars.playerCastTimer)
+    LibCLHealth.RegisterCallback(discoVars.discoMainFrame, "COMBAT_LOG_HEALTH", function(event, unitID, eventType)
+        if discoVars.discoSubframes[unitID] then
+            updateHealthForUID(unitID, discoVars.discoSubframes, priorityList, discoVars.castTargetGUID, discoVars.playerCastTimer)
         end
     end)
 

@@ -232,6 +232,9 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         if not subframes[key] then subframes[key] = CreateFrame("FRAME", "DiscoRaidSubFrameOverlay"..key, discoMainFrame); end
         subframes[key]:SetFrameStrata("HIGH")
 
+        if not subframes[key].mouseOver then subframes[key].mouseOver = CreateFrame("FRAME", "DiscoOverlayMouseOver"..key, subframes[key]); end
+        subframes[key].mouseOver:SetAllPoints(subframes[key])
+
         if not subframes[key].threatFrame then subframes[key].threatFrame = CreateFrame("FRAME", "DiscoThreatOverlay"..key, subframes[key]); end
         subframes[key].threatFrame:SetPoint("CENTER", subframes[key], "TOPLEFT", 7*fs, -7*fs)
         subframes[key].threatFrame:SetSize(12, 12)
@@ -266,6 +269,19 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].resurrect:SetSize(18*fs, 18*fs)
         subframes[key].resurrect:SetPoint("CENTER", subframes[key], "CENTER", 0, -2*fs)
         subframes[key].resurrect:SetAlpha(0)
+
+        if not subframes[key].arrow then subframes[key].arrow = subframes[key]:CreateTexture(nil, "BORDER"); end
+        subframes[key].arrow:SetTexture("Interface/AddOns/DiscoHealer/assets/arrow.tga")
+        subframes[key].arrow:SetSize(22*fs, 22*fs)
+        subframes[key].arrow:SetPoint("CENTER", subframes[key], "CENTER", 0, 0)
+        subframes[key].arrow:SetAlpha(0)
+
+        if not subframes[key].mindControl then subframes[key].mindControl = subframes[key]:CreateFontString(nil, "OVERLAY", "GameFontNormal"); end
+        subframes[key].mindControl:SetText("(MC)")
+        --subframes[key].mindControl:SetTextColor(0.4, 0.4, 0.4)
+        subframes[key].mindControl:SetPoint("CENTER", subframes[key], "CENTER", 0, 0)
+        subframes[key].mindControl:SetAlpha(0)
+
 
         -- CastBar Animation
         if not subframes[key].castBarFrame then subframes[key].castBarFrame = CreateFrame("FRAME", "DiscoRaidCastBarSubFrame"..key, subframes[key]); end
@@ -415,6 +431,8 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
             subframes[v.key].classTexture:SetColorTexture(classRGB.r, classRGB.g, classRGB.b)
             subframes[v.key].text:SetTextColor(classRGB.r, classRGB.g, classRGB.b)
             -- Set Attributes
+            subframes[v.key].leftClick:SetScript("OnEnter", function() discoVars.mouseOverTarget = unitID; end)
+            subframes[v.key].leftClick:SetScript("OnLeave", function() discoVars.mouseOverTarget = nil; overlayFrames[v.key].arrow:SetAlpha(0); end)
             subframes[v.key].leftClick:SetAttribute("unit", unitID)
             if DiscoSettings.clickAction == "target" then
                 subframes[v.key].leftClick:SetAttribute("type", "target")
@@ -440,6 +458,12 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
     end
 
     -- Hide unused subframes
+    if j > 6 then
+        for i=1, 10 do
+            subframes[i]:Hide()
+            overlayFrames[i]:Hide()
+        end
+    end
     for i=k, 60 do
         subframes[i]:Hide()
         overlayFrames[i]:Hide()
@@ -568,4 +592,26 @@ function getClassColorRGB(className)
     else
         return {r=0.5, g=0.5, b=0.5}
     end
+end
+
+function getArrowCoords(direction)
+    local l, r, u, d
+    if direction == 1 then
+        l, r, u, d = 0, 0.33, 0, 0.33
+    elseif direction == 8 then
+        l, r, u, d = 0.33, 0.66, 0.66, 1
+    elseif direction == 7 then
+        l, r, u, d = 0, 0.33, 0.66, 1
+    elseif direction == 6 then
+        l, r, u, d = 0.33, 0.66, 0.33, 0.66
+    elseif direction == 5 then
+        l, r, u, d = 0.33, 0.66, 0, 0.333
+    elseif direction == 4 then
+        l, r, u, d = 0, 0.33, 0.33, 0.66
+    elseif direction == 3 then
+        l, r, u, d = 0.66, 1, 0, 0.33
+    elseif direction == 2 then
+        l, r, u, d = 0.66, 1, 0.33, 0.66
+    end
+    return l, r, u, d
 end

@@ -24,6 +24,8 @@ DiscoHealerOptionsPanel.panel.refresh = function()
         UIDropDownMenu_SetText(DiscoHealerOptionsPanel.panel.actionSelector, "Cast On Player")
     end
 
+    DiscoHealerOptionsPanel.panel.CastLookaheadBox:SetText(DiscoHealerOptionsPanel.tempSettings.castLookAhead)
+
     DiscoHealerOptionsPanel.panel.spellSelect.box1:SetText(DiscoHealerOptionsPanel.tempSettings.leftMacro)
     DiscoHealerOptionsPanel.panel.spellSelect.box2:SetText(DiscoHealerOptionsPanel.tempSettings.rightMacro)
     DiscoHealerOptionsPanel.panel.spellSelect.box3:SetText(DiscoHealerOptionsPanel.tempSettings.shiftLMacro)
@@ -45,6 +47,8 @@ end
 DiscoHealerOptionsPanel.panel.okay = function()
     DiscoSettings = DiscoHealerOptionsPanel.tempSettings
 
+    DiscoSettings.castLookAhead = DiscoHealerOptionsPanel.panel.CastLookaheadBox:GetText()
+
     DiscoSettings.leftMacro = DiscoHealerOptionsPanel.panel.spellSelect.box1:GetText()
     DiscoSettings.rightMacro = DiscoHealerOptionsPanel.panel.spellSelect.box2:GetText()
     DiscoSettings.shiftLMacro = DiscoHealerOptionsPanel.panel.spellSelect.box3:GetText()
@@ -64,7 +68,8 @@ DiscoHealerOptionsPanel.panel.default = function()
     DiscoSettings = {
         frameSize=1,
         showNames=true,
-        castLookAhead=2,
+        showPets=false,
+        castLookAhead=4,
         minimized=false,
         clickAction = "target",
         ctrlLMacro = "",
@@ -114,6 +119,12 @@ function generateOptionsPanel()
         discoVars.discoMainFrame:SetPoint("CENTER", UIParent, "CENTER")
     end)
 
+    --[[
+    --  Estimated Heals
+    DiscoHealerOptionsPanel.panel.CastLookaheadTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -125, -100)
+    DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetText("Estimate heals from non-addon users:")
+    ]]
     --  Cast Time Lookahead
     DiscoHealerOptionsPanel.panel.CastLookaheadTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -125, -100)

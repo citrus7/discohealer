@@ -1,7 +1,8 @@
 local addonName, discoVars = ...
 
-HealComm = LibStub("LibHealComm-4.0", true)
-LibCLHealth = LibStub("LibCombatLogHealth-1.0")
+local HealComm = LibStub("LibHealComm-4.0", true)
+local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
+local HealEstimator = HealEstimator
 
 local major = "DiscoHealer"
 local minor = 1
@@ -10,6 +11,7 @@ local DiscoHealer = LibStub:NewLibrary(major, minor)
 -- Cache Commonly Used Global Functions
 local GetTime = GetTime;
 local CheckInteractDistance = CheckInteractDistance;
+local GetNumGroupMembers = GetNumGroupMembers;
 local UnitInRange = UnitInRange;
 local IsSpellInRange = IsSpellInRange;
 local UnitDetailedThreatSituation = UnitDetailedThreatSituation;
@@ -17,6 +19,7 @@ local UnitIsCharmed = UnitIsCharmed;
 local UnitCanAttack = UnitCanAttack;
 local UnitClassification = UnitClassification;
 local UnitName = UnitName;
+local UnitGUID = UnitGUID;
 local UnitIsEnemy = UnitIsEnemy;
 local UnitIsTrivial = UnitIsTrivial;
 local GetSpellCooldown = GetSpellCooldown;
@@ -26,6 +29,10 @@ local UnitThreatSituation = UnitThreatSituation;
 local UnitHasIncomingResurrection = UnitHasIncomingResurrection;
 local InCombatLockdown = InCombatLockdown;
 local type = type;
+local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo;
+
+local DISCO_atan2 = math.atan2;
+local DISCO_PI, DISCO_2_PI = math.pi, math.pi * 2;
 
 -- Helper function to calculater priority
 --[[
@@ -55,16 +62,19 @@ end
 -- Maintain priority queue
 local function updatePriorityList(unitID, priorityList, newPriority)
     local queueSize = 5
-    -- Calculate Priority
     local add, remove
     local inRange = select(1, UnitInRange(unitID)) or UnitIsUnit(unitID, "player")
+    local maxPriority = newPriority
 
     -- Check if already in priority list
     local addedFlag = false
+    local unitIndex = nil
     for i=1, #priorityList do
         if priorityList[i].unitID == unitID then
+            unitIndex = i
+            --[[
             -- Remove dead and full health units
-            if newPriority<1 or newPriority>999 or not inRange then
+            if newPriority<10 or newPriority>999 or not inRange then
                 remove = priorityList[i].unitID
                 priorityList[i] = nil
             -- Update priority
@@ -73,11 +83,37 @@ local function updatePriorityList(unitID, priorityList, newPriority)
                 priorityList[i] = {priority=newPriority, unitID=unitID}
             end
             addedFlag = true
+            ]]
+        else
+            if priorityList[i].priority > maxPriority then
+                maxPriority = priorityList[i].priority
+            end
         end
     end
 
+    local shouldAdd = not (newPriority<10 or newPriority>999 or not inRange or (maxPriority > 150 and newPriority < 50) or (#priorityList == queueSize and (newPriority-priorityList[#priorityList].priority) < 50))
+
+    -- Update existing entry
+    if unitIndex then
+        if shouldAdd then
+            add = priorityList[unitIndex].unitID
+            priorityList[unitIndex] = {priority=newPriority, unitID=unitID}
+        else
+            remove = priorityList[unitIndex].unitID
+            priorityList[unitIndex] = nil
+        end
+    -- No existing entry, should add
+    elseif shouldAdd then
+        add = unitID
+        priorityList[#priorityList+1] = {priority=newPriority, unitID=unitID}
+    -- New entry ignored
+    else
+        return
+    end
+
     -- Full health, dead, and out of range units are ignored
-    if addedFlag == false and (newPriority < 1 or newPriority>999 or not inRange or (#priorityList == queueSize and (newPriority-priorityList[#priorityList].priority) < 50)) then
+    --[[
+    if addedFlag == false and (newPriority<10 or newPriority>999 or not inRange or (maxPriority > 150 and newPriority < 75) or (#priorityList == queueSize and (newPriority-priorityList[#priorityList].priority) < 50)) then
         return
     end
 
@@ -85,6 +121,7 @@ local function updatePriorityList(unitID, priorityList, newPriority)
         add = unitID
         priorityList[#priorityList+1] = {priority=newPriority, unitID=unitID}
     end
+    ]]
 
     if #priorityList > 1 then
         table.sort(priorityList, function(a,b)
@@ -106,36 +143,35 @@ end
 
 -- Perform all health bar, texture color, alpha, and priority queue updates
 local function updateHealthForUID(unitID, subframes, priorityList, playerTargetGUID, playerCastTime)
-    if subframes[unitID]==nil then
+    if not unitID or subframes[UnitGUID(unitID)]==nil then
         print("Error, updateSubframeHealth called on nonexistant unitID: ", unitID)
         return
     end
 
+    local unitGUID = UnitGUID(unitID)
     local fs = DiscoSettings.frameSize or 1
-    local subframe = subframes[UnitGUID(unitID)]
+    local subframe = subframes[unitGUID]
     -- Update subframe health
     local currentTime = GetTime()
     local healTimer = currentTime + DiscoSettings.castLookAhead
-    local isActiveCastTarget = playerTargetGUID == UnitGUID(unitID) and currentTime < playerCastTime
+    local isActiveCastTarget = playerTargetGUID == unitGUID and currentTime < playerCastTime
     -- Use playerCastTime instead of lookahead if active target
     if isActiveCastTarget then
         healTimer = playerCastTime + 0.1
     end
-    local unitGUID = UnitGUID(unitID)
-    local healAmount = (HealComm:GetOthersHealAmount(unitGUID, HealComm.ALL_HEALS, healTimer) or 0) * HealComm:GetHealModifier(unitGUID)
+    local estimatedHealAmount = HealEstimator:GetHealAmount(unitGUID, healTimer) * HealComm:GetHealModifier(unitGUID)
+    local hcHealAmount = (HealComm:GetOthersHealAmount(unitGUID, HealComm.ALL_HEALS, healTimer) or 0) * HealComm:GetHealModifier(unitGUID)
+    local healAmount = estimatedHealAmount + hcHealAmount
     local playerHealAmount = healAmount + (HealComm:GetHealAmount(unitGUID, HealComm.ALL_HEALS, playerCastTime, UnitGUID("player")) or 0) * HealComm:GetHealModifier(unitGUID)
     local unitHealth = LibCLHealth.UnitHealth(unitID)
     local maxHealth = UnitHealthMax(unitID)
     local healthRatio = unitHealth/maxHealth
     local inRange = select(1, UnitInRange(unitID)) or UnitIsUnit(unitID, "player")
-    local newPriority = (1 - (healAmount + unitHealth) / maxHealth) * 1000
-    if newPriority < 1 then
+    local newPriority = (1 - (hcHealAmount + unitHealth + estimatedHealAmount * 0.75) / maxHealth) * 1000
+    -- Full health or mind controlled
+    if newPriority < 1 or UnitIsEnemy(unitID, "player") then
         newPriority = 0
     end
-
-    -- Update priority list
-    local _, remove = updatePriorityList(unitID, priorityList, newPriority)
-    --updatePriorityList(unitID, priorityList, newPriority)
 
     subframe.healthBar:SetMinMaxValues(0, maxHealth)
     subframe.healthBar:SetValue(unitHealth)
@@ -171,9 +207,8 @@ local function updateHealthForUID(unitID, subframes, priorityList, playerTargetG
 
     -- Player, Maintanks, and CastTarget always displayed if in range, and are separate from priority list
     local index = string.match (unitID, "%d+")
-    if UnitIsUnit(unitID, "player") or (isActiveCastTarget or index and select(10, GetRaidRosterInfo(index)) == "MAINTANK") and inRange then
-        --local priority = calculatePriority(unitID, playerTargetGUID, playerCastTime)
-        if healthRatio > 0.999 then
+    if UnitIsUnit(unitID, "player") or (GetNumGroupMembers() < 6 or isActiveCastTarget or index and select(10, GetRaidRosterInfo(index)) == "MAINTANK") and inRange then
+        if healthRatio > 0.999 or UnitIsEnemy(unitID, "player") then
             subframe.alpha = subframe.defaultAlpha
         elseif not UnitIsDeadOrGhost(unitID) then
             subframe.alpha = 1
@@ -182,10 +217,13 @@ local function updateHealthForUID(unitID, subframes, priorityList, playerTargetG
         return
     end
 
+    -- Update priority list
+    local _, remove = updatePriorityList(unitID, priorityList, newPriority)
+
     -- Hide any frames that were removed from priority list
     if remove and UnitGUID(remove) ~= playerTargetGUID then
-        subframe.alpha = subframe.defaultAlpha
-        subframe:SetHidden()
+        subframes[unitGUID].alpha = subframe.defaultAlpha
+        subframes[unitGUID]:SetHidden()
     end
     
     -- See if unit in priorityList
@@ -230,6 +268,10 @@ local function getAllPartyUnitIDs()
         pkey = "raidpet" .. i
         if UnitExists(key) then
             allGroupIDs[#allGroupIDs+1] = key
+            local classFilename, _ = UnitClassBase(key)
+            if classFilename == "PALADIN" or classFilename == "PRIEST" or classFilename == "DRUID" or classFilename == "SHAMAN" then
+                HealEstimator:TrackHealer(UnitGUID(key))
+            end
         end
         if UnitIsVisible(pkey) then
             allGroupIDs[#allGroupIDs+1] = pkey
@@ -240,6 +282,10 @@ local function getAllPartyUnitIDs()
         pkey = "partypet" .. i
         if UnitExists(key) then
             allGroupIDs[#allGroupIDs+1] = key
+            local classFilename, _ = UnitClassBase(key)
+            if classFilename == "PALADIN" or classFilename == "PRIEST" or classFilename == "DRUID" or classFilename == "SHAMAN" then
+                HealEstimator:TrackHealer(UnitGUID(key))
+            end
         end
         if UnitIsVisible(pkey) then
             allGroupIDs[#allGroupIDs+1] = pkey
@@ -338,9 +384,19 @@ local function updatePartyMembersFrequent(allPartyMembers, subframes, overlayFra
             -- Check player in range
             if select(1, UnitInRange(unitID)) or UnitIsUnit(unitID, "player") then
                 subframes[unitID]:SetHidden()
+            -- Unit is Mind Controlled
+            elseif UnitIsEnemy(unitID, "player") then
+                subframes[unitID]:SetAlpha(subframes[unitID].defaultAlpha)
             else
                 subframes[unitID]:SetAlpha(subframes[unitID].defaultAlpha)
             end
+
+            if UnitIsEnemy(unitID, "player") then
+                overlayFrames[unitID].mindControl:SetAlpha(0.65)
+            else
+                overlayFrames[unitID].mindControl:SetAlpha(0)
+            end
+
              -- Check player resurrection pending
             if UnitHasIncomingResurrection(unitID) then
                 overlayFrames[unitID].resurrect:SetAlpha(0.65)
@@ -366,6 +422,42 @@ local function checkResetTimer(timerName, nextTick, resetTime)
 	return false;
 end
 
+local function getMapPositionForUnit(mapID, unitID)
+    vector = C_Map.GetPlayerMapPosition(mapID, unitID);
+    if not vector then return; end
+
+    return vector:GetXY();
+end
+
+local function updateArrow()
+    local target = discoVars.mouseOverTarget
+    if not target then return; end
+    local mapID = C_Map.GetBestMapForUnit(target) 
+    local pMapID = C_Map.GetBestMapForUnit("player");
+    if not mapID or not pMapID or mapID ~= pMapID then return; end
+
+    local inRange = select(1, UnitInRange(target)) or UnitIsUnit(target, "player")
+    if not inRange then
+        --local orientation = GetPlayerMapPosition(target)
+        local x, y = getMapPositionForUnit(mapID, target)
+        local pX, pY = getMapPositionForUnit(mapID, "player")
+        if (x or 0) + (y or 0) <= 0 or (pX or 0) + (pY or 0) <= 0 then return; end
+        local tFacing = GetPlayerFacing();
+        tFacing = tFacing < 0 and tFacing + DISCO_2_PI or tFacing
+
+        local direction = 4 * (DISCO_PI - DISCO_atan2(pX - x, y - pY) - tFacing) / DISCO_PI + 0.5
+        direction = direction < 0 and direction + 8 or direction
+        direction = direction > 7.99 and direction - 0.5 or direction
+        --print(direction)
+
+        discoVars.discoOverlaySubframes[target].arrow:SetAlpha(1)
+        discoVars.discoOverlaySubframes[target].arrow:SetTexCoord(getArrowCoords(math.floor(direction) + 1))
+    else
+        discoVars.discoOverlaySubframes[target].arrow:SetAlpha(0)
+    end
+
+end
+
 -- MAIN
 local function main()
     discoVars.discoMainFrame = CreateFrame("FRAME", "DiscoMainFrame", UIParent)
@@ -385,8 +477,10 @@ local function main()
     discoVars.castTicker = nil
     discoVars.castPercent = 0
     discoVars.playerCastTimer = 0
+    discoVars.mmouseOverTarget = nil
 
     discoVars.allTimers = {
+        --["UPDATE_VERY_FREQUENT"] = 0.1,
         ["UPDATE_FREQUENT"] = 0.2,
         ["UPDATE_SEMI_FREQUENT"] = 1,
         ["UPDATE_SLOW"] = 10,
@@ -451,18 +545,13 @@ local function main()
         discoVars.discoMainFrame.texture:SetAlpha(0.4)
     end
 
-    -- Raid group updated
     --[[
-    function eventHandlers:RAID_TARGET_UPDATE()
-        discoVars.allPartyMembers = getAllPartyUnitIDs()
-        if InCombatLockdown() or discoHealerLoaded == false then
-            framesNeedUpdate = true
-        else
-            recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
-        end
+    function eventHandlers:UNIT_TARGET()
+        print("unit target")
     end
     ]]
 
+    -- Handler for player target changed
     function eventHandlers:PLAYER_TARGET_CHANGED()
         -- untarget current target
         if discoVars.discoSubframes[playerTarget] then
@@ -499,43 +588,62 @@ local function main()
         end
     end
 
-
-    -- Combat log event for enemy targets
+    -- Combat Log
     function eventHandlers:COMBAT_LOG_EVENT_UNFILTERED()
-        local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags = CombatLogGetCurrentEventInfo()
+        local timestamp, subevent, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, _, spellName, _, healAmount, _, _, crit = CombatLogGetCurrentEventInfo()
+        local estimatedTargetGUID = UnitGUID((sourceName or "") .. "-target") or sourceGUID
 
-        if subevent == "UNIT_DIED" then
+        local trackedHealer = HealEstimator:GetTrackedHealer(sourceGUID)
+
+        if subevent == "SPELL_CAST_START" and trackedHealer then
+            --local estimatedTargetGUID = trackedHealer.targetGUID or sourceGUID
+            --local estimatedQueueTargetGUID = trackedHealer.targetGUID3 or sourceGUID
+            if HealEstimator:IsDirectHeal(spellName) then
+                --[[
+                local _, _, _, _, endTime, _, castID, _, spellID = CastingInfo(sourceName)
+                print(CastingInfo(sourceName))
+                print(ChannelInfo(sourceName))
+                ]]
+                HealEstimator:RecordHeal(sourceGUID, estimatedTargetGUID, spellName, GetTime())
+                updateHealthForUID(HealComm:GetGUIDUnitMapTable()[estimatedTargetGUID], discoVars.discoSubframes, priorityList, discoVars.castTargetGUID, discoVars.playerCastTimer)
+            end
+        elseif subevent == "SPELL_HEAL" then
+            if trackedHealer and HealEstimator:IsDirectHeal(spellName) and discoVars.discoSubframes[destGUID] then
+                HealEstimator:VerifyHeal(sourceGUID, destGUID, spellName, healAmount, crit, GetTime())
+            end
+        --[[
+        elseif subevent == "SPELL_CAST_FAILED" then
+            HealEstimator:CancelHeal(sourceGUID)
+        ]]
+        elseif subevent == "UNIT_DIED" then
             removeThreat(destGUID, discoVars.discoOverlaySubframes, unitTargetList)
-            --discoVars.discoSubframes[destGUID].texture:SetColorTexture(0.4, 0.4, 0.4)
-            --discoVars.discoSubframes[destGUID].alpha = subframes[destGUID].defaultAlpha
-            --discoVars.discoSubframes[destGUID]:SetHidden()
         end
+        
     end
-    
+
 
     -- Healcomm incoming heal function
     function healcommCallbacks:HealStarted(event, casterGUID, spellID, spellType, endTime, ...)
-        local name, rank, icon, castTime, minRange, maxRange = GetSpellInfo(spellID)
-        local down, up, lagHome, lagWorld = GetNetStats();
-        
+        local castTime = endTime - GetTime()
         local guidToUid = HealComm:GetGUIDUnitMapTable()
         for i=1, select("#", ...) do
             local playerGUID = select(i, ...)
             targetID = guidToUid[playerGUID]
             if targetID and discoVars.discoSubframes[targetID] then
                 -- Update cast bar
-                local name, rank, icon, castTime, minRange, maxRange = GetSpellInfo(spellID)
                 casterId = guidToUid[casterGUID]
                 if casterId and UnitIsUnit(casterId, "player") and spellType == HealComm.DIRECT_HEALS then
                     discoVars.castTargetGUID = playerGUID
                     discoVars.playerCastTimer = endTime
                     --discoVars.castTicker = C_Timer.NewTicker(0.01, function() UpdateCastBar(discoVars.discoOverlaySubframes[castTargetGUID].castbar); end, castTime*0.1)
-                    UpdateCastBar(discoVars.discoOverlaySubframes[targetID].castBarFrame, 0.01, castTime * 0.001)
+                    UpdateCastBar(discoVars.discoOverlaySubframes[targetID].castBarFrame, 0.01, castTime)
                 end
                 -- Update health bars
                 updateHealthForUID(targetID, discoVars.discoSubframes, priorityList, discoVars.castTargetGUID, discoVars.playerCastTimer)
             end
         end
+
+        HealEstimator:UntrackHealer(casterGUID)
     end
 
     -- Healcomm heal stopped function
@@ -588,14 +696,21 @@ local function main()
     end
 
     -- Update Frequent
-    function UpdateFrequent(self, timeDelta)
+    local function UpdateFrequent(self, timeDelta)
+        --[[
+        if checkResetTimer("UPDATE_VERY_FREQUENT", timeDelta, 0.1) then
+            HealEstimator:UpdateTargets()
+        end
+        ]]
         if checkResetTimer("UPDATE_FREQUENT", timeDelta, 0.2) then
             updatePartyMembersFrequent(discoVars.allPartyMembers, discoVars.discoSubframes, discoVars.discoOverlaySubframes, unitTargetList)
+            updateArrow()
         end
         if checkResetTimer("UPDATE_SEMI_FREQUENT", timeDelta, 1) then
             removeExpiredThreat(discoVars.discoOverlaySubframes, unitTargetList)
         end
         if checkResetTimer("UPDATE_SLOW", timeDelta, 10) then
+            HealEstimator:ListTrackedHealers()
             discoVars.allPartyMembers = getAllPartyUnitIDs()
             updateHealthFull(discoVars.allPartyMembers, discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, priorityList, discoVars.castTargetGUID, discoVars.playerCastTimer)
         end

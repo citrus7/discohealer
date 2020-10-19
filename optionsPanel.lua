@@ -18,13 +18,16 @@ DiscoHealerOptionsPanel.panel.refresh = function()
 
     DiscoHealerOptionsPanel.panel.ShowPetSelector:SetChecked((DiscoHealerOptionsPanel.tempSettings.showPets))
 
+    --DiscoHealerOptionsPanel.panel.estimateHealsSelector:SetChecked((DiscoHealerOptionsPanel.tempSettings.estimateHeals))
+    DiscoHealerOptionsPanel.panel.arrangeByGroupSelector:SetChecked((DiscoHealerOptionsPanel.tempSettings.arrangeByGroup))
+
     if DiscoHealerOptionsPanel.tempSettings.clickAction == "target" then
         UIDropDownMenu_SetText(DiscoHealerOptionsPanel.panel.actionSelector, "Target Player")
     else
         UIDropDownMenu_SetText(DiscoHealerOptionsPanel.panel.actionSelector, "Cast On Player")
     end
 
-    DiscoHealerOptionsPanel.panel.CastLookaheadBox:SetText(DiscoHealerOptionsPanel.tempSettings.castLookAhead)
+    --DiscoHealerOptionsPanel.panel.CastLookaheadBox:SetText(DiscoHealerOptionsPanel.tempSettings.castLookAhead)
 
     DiscoHealerOptionsPanel.panel.spellSelect.box1:SetText(DiscoHealerOptionsPanel.tempSettings.leftMacro)
     DiscoHealerOptionsPanel.panel.spellSelect.box2:SetText(DiscoHealerOptionsPanel.tempSettings.rightMacro)
@@ -42,12 +45,16 @@ DiscoHealerOptionsPanel.panel.refresh = function()
             DiscoHealerOptionsPanel.panel.spellSelect:Hide()
         end 
     end
+
+    DiscoHealerOptionsPanel.panel.colorPicker1.texture:SetColorTexture(DiscoHealerOptionsPanel.tempSettings.lowPrioRGB.r, DiscoHealerOptionsPanel.tempSettings.lowPrioRGB.g, DiscoHealerOptionsPanel.tempSettings.lowPrioRGB.b)
+    DiscoHealerOptionsPanel.panel.colorPicker2.texture:SetColorTexture(DiscoHealerOptionsPanel.tempSettings.medPrioRGB.r, DiscoHealerOptionsPanel.tempSettings.medPrioRGB.g, DiscoHealerOptionsPanel.tempSettings.medPrioRGB.b)
+    DiscoHealerOptionsPanel.panel.colorPicker3.texture:SetColorTexture(DiscoHealerOptionsPanel.tempSettings.highPrioRGB.r, DiscoHealerOptionsPanel.tempSettings.highPrioRGB.g, DiscoHealerOptionsPanel.tempSettings.highPrioRGB.b)
 end
 -- Okay Function
 DiscoHealerOptionsPanel.panel.okay = function()
     DiscoSettings = DiscoHealerOptionsPanel.tempSettings
 
-    DiscoSettings.castLookAhead = DiscoHealerOptionsPanel.panel.CastLookaheadBox:GetText()
+    --DiscoSettings.castLookAhead = DiscoHealerOptionsPanel.panel.CastLookaheadBox:GetText()
 
     DiscoSettings.leftMacro = DiscoHealerOptionsPanel.panel.spellSelect.box1:GetText()
     DiscoSettings.rightMacro = DiscoHealerOptionsPanel.panel.spellSelect.box2:GetText()
@@ -65,20 +72,7 @@ DiscoHealerOptionsPanel.panel.okay = function()
 end
 -- Default Function
 DiscoHealerOptionsPanel.panel.default = function()
-    DiscoSettings = {
-        frameSize=1,
-        showNames=true,
-        showPets=false,
-        castLookAhead=4,
-        minimized=false,
-        clickAction = "target",
-        ctrlLMacro = "",
-        ctrlRMacro = "",
-        shiftLMacro = "",
-        shiftRMacro = "",
-        leftMacro = "",
-        rightMacro = "",
-    }
+    DiscoSettings = discoVars.defaultSettings
     DiscoHealerOptionsPanel.panel.refresh()
 end
 InterfaceOptions_AddCategory(DiscoHealerOptionsPanel.panel);
@@ -119,13 +113,37 @@ function generateOptionsPanel()
         discoVars.discoMainFrame:SetPoint("CENTER", UIParent, "CENTER")
     end)
 
-    --[[
+    
     --  Estimated Heals
-    DiscoHealerOptionsPanel.panel.CastLookaheadTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -125, -100)
-    DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetText("Estimate heals from non-addon users:")
+    --[[
+    DiscoHealerOptionsPanel.panel.estimateHealsTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.estimateHealsTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -180, -100)
+    DiscoHealerOptionsPanel.panel.estimateHealsTitle:SetText("Estimate heals from non-addon users")
+
+    DiscoHealerOptionsPanel.panel.estimateHealsSelector = CreateFrame("CHECKBUTTON", "DiscoCheckButton", DiscoHealerOptionsPanel.panel, "ChatConfigCheckButtonTemplate")
+    DiscoHealerOptionsPanel.panel.estimateHealsSelector:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -50, -105)
+    DiscoHealerOptionsPanel.panel.estimateHealsSelector:SetScript("OnClick", 
+    function()
+        DiscoHealerOptionsPanel.tempSettings.estimateHeals = DiscoHealerOptionsPanel.panel.estimateHealsSelector:GetChecked()
+    end
+    );
     ]]
+
+    -- Arrange by group
+    DiscoHealerOptionsPanel.panel.arrangeByGroupTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.arrangeByGroupTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -230, -100)
+    DiscoHealerOptionsPanel.panel.arrangeByGroupTitle:SetText("Arrange by group")
+
+    DiscoHealerOptionsPanel.panel.arrangeByGroupSelector = CreateFrame("CHECKBUTTON", "DiscoCheckButton", DiscoHealerOptionsPanel.panel, "ChatConfigCheckButtonTemplate")
+    DiscoHealerOptionsPanel.panel.arrangeByGroupSelector:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -150, -105)
+    DiscoHealerOptionsPanel.panel.arrangeByGroupSelector:SetScript("OnClick", 
+    function()
+        DiscoHealerOptionsPanel.tempSettings.arrangeByGroup = DiscoHealerOptionsPanel.panel.arrangeByGroupSelector:GetChecked()
+    end
+    );
+    
     --  Cast Time Lookahead
+    --[[
     DiscoHealerOptionsPanel.panel.CastLookaheadTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -125, -100)
     DiscoHealerOptionsPanel.panel.CastLookaheadTitle:SetText("Display Friendly Heals ending within                    Seconds")
@@ -136,6 +154,7 @@ function generateOptionsPanel()
     DiscoHealerOptionsPanel.panel.CastLookaheadBox:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -40, -101)
     DiscoHealerOptionsPanel.panel.CastLookaheadBox:SetText(DiscoHealerOptionsPanel.tempSettings.castLookAhead)
     DiscoHealerOptionsPanel.panel.CastLookaheadBox:SetCursorPosition(0)
+    ]]
 
     --  Show Pets
     DiscoHealerOptionsPanel.panel.ShowPetTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -265,6 +284,116 @@ function generateOptionsPanel()
     DiscoHealerOptionsPanel.panel.spellSelect.box6:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "CENTER", 10, -125)
     DiscoHealerOptionsPanel.panel.spellSelect.box6:SetText(DiscoHealerOptionsPanel.tempSettings.ctrlRMacro)
     DiscoHealerOptionsPanel.panel.spellSelect.box6:SetCursorPosition(0)
+
+    -- Color Picker
+    local selectedColor
+    local selectedColorPicker
+    local function colorPickerCallback(restore)
+        local newR, newG, newB;
+        if restore then
+         newR, newG, newB = unpack(restore);
+         --print("canceled")
+        else
+         -- Something changed
+         newR, newG, newB = ColorPickerFrame:GetColorRGB();
+         selectedColor.r, selectedColor.g, selectedColor.b = ColorPickerFrame:GetColorRGB();
+        end
+        
+        -- Update our internal storage.
+        --r, g, b, a = newR, newG, newB, newA;
+        -- And update any UI elements that use this color...
+        selectedColor.r = newR
+        selectedColor.g = newG
+        selectedColor.b = newB
+        selectedColorPicker:SetColorTexture(newR, newG, newB)
+    end
+    local function showColorPicker(r, g, b, a, changedCallback)
+        ColorPickerFrame:SetColorRGB(r,g,b);
+        ColorPickerFrame.hasOpacity, ColorPickerFrame.opacity = (a ~= nil), a;
+        ColorPickerFrame.previousValues = {r,g,b,a};
+        ColorPickerFrame.func, ColorPickerFrame.opacityFunc, ColorPickerFrame.cancelFunc = 
+         changedCallback, changedCallback, changedCallback;
+        ColorPickerFrame:Hide(); -- Need to run the OnShow handler.
+        ColorPickerFrame:Show();
+    end
+    
+    DiscoHealerOptionsPanel.panel.colorPicker = CreateFrame("FRAME", "DiscoColorPicker", DiscoHealerOptionsPanel.panel)
+    DiscoHealerOptionsPanel.panel.colorPicker:SetPoint("TOPLEFT", DiscoHealerOptionsPanel.panel ,"TOPLEFT", 0, -150)
+    DiscoHealerOptionsPanel.panel.colorPicker:SetPoint("BOTTOMRIGHT", DiscoHealerOptionsPanel.panel ,"BOTTOMRIGHT", 0, -150)
+
+    -- Low Priority
+    DiscoHealerOptionsPanel.panel.colorPicker.lowPrioLabel = DiscoHealerOptionsPanel.panel.colorPicker:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.colorPicker.lowPrioLabel:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 65, 0)
+    DiscoHealerOptionsPanel.panel.colorPicker.lowPrioLabel:SetText("Low Priority")
+
+    DiscoHealerOptionsPanel.panel.colorPicker1 = CreateFrame("FRAME", "DiscoColorPicker1", DiscoHealerOptionsPanel.panel)
+    DiscoHealerOptionsPanel.panel.colorPicker1:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 165, 0)
+    DiscoHealerOptionsPanel.panel.colorPicker1:SetSize(40, 20)
+
+    DiscoHealerOptionsPanel.panel.colorPicker1.bgTexture = DiscoHealerOptionsPanel.panel.colorPicker1:CreateTexture(nil, "BACKGROUND")
+    DiscoHealerOptionsPanel.panel.colorPicker1.bgTexture:SetAllPoints(DiscoHealerOptionsPanel.panel.colorPicker1)
+    DiscoHealerOptionsPanel.panel.colorPicker1.bgTexture:SetColorTexture(1, 0.8, 0)
+    
+    DiscoHealerOptionsPanel.panel.colorPicker1.texture = DiscoHealerOptionsPanel.panel.colorPicker1:CreateTexture(nil, "BORDER")
+    DiscoHealerOptionsPanel.panel.colorPicker1.texture:SetPoint("TOPLEFT", DiscoHealerOptionsPanel.panel.colorPicker1 ,"TOPLEFT", 1, -1)
+    DiscoHealerOptionsPanel.panel.colorPicker1.texture:SetPoint("BOTTOMRIGHT", DiscoHealerOptionsPanel.panel.colorPicker1 ,"BOTTOMRIGHT", -1, 1)
+    DiscoHealerOptionsPanel.panel.colorPicker1.texture:SetColorTexture(DiscoHealerOptionsPanel.tempSettings.lowPrioRGB.r, DiscoHealerOptionsPanel.tempSettings.lowPrioRGB.g, DiscoHealerOptionsPanel.tempSettings.lowPrioRGB.b)
+    
+    DiscoHealerOptionsPanel.panel.colorPicker1:SetScript("OnMouseDown", function(self, button)
+        selectedColor = DiscoHealerOptionsPanel.tempSettings.lowPrioRGB
+        selectedColorPicker = DiscoHealerOptionsPanel.panel.colorPicker1.texture
+        showColorPicker(DiscoHealerOptionsPanel.tempSettings.lowPrioRGB.r, DiscoHealerOptionsPanel.tempSettings.lowPrioRGB.g, DiscoHealerOptionsPanel.tempSettings.lowPrioRGB.b, nil, colorPickerCallback)
+      end)
+
+    -- Medium Priority
+    DiscoHealerOptionsPanel.panel.colorPicker.medPrioLabel = DiscoHealerOptionsPanel.panel.colorPicker:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.colorPicker.medPrioLabel:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 65, -40)
+    DiscoHealerOptionsPanel.panel.colorPicker.medPrioLabel:SetText("Medium Priority")
+
+    DiscoHealerOptionsPanel.panel.colorPicker2 = CreateFrame("FRAME", "DiscoColorPicker2", DiscoHealerOptionsPanel.panel)
+    DiscoHealerOptionsPanel.panel.colorPicker2:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 165, -40)
+    DiscoHealerOptionsPanel.panel.colorPicker2:SetSize(40, 20)
+
+    DiscoHealerOptionsPanel.panel.colorPicker2.bgTexture = DiscoHealerOptionsPanel.panel.colorPicker2:CreateTexture(nil, "BACKGROUND")
+    DiscoHealerOptionsPanel.panel.colorPicker2.bgTexture:SetAllPoints(DiscoHealerOptionsPanel.panel.colorPicker2)
+    DiscoHealerOptionsPanel.panel.colorPicker2.bgTexture:SetColorTexture(1, 0.8, 0)
+    
+    DiscoHealerOptionsPanel.panel.colorPicker2.texture = DiscoHealerOptionsPanel.panel.colorPicker2:CreateTexture(nil, "BORDER")
+    DiscoHealerOptionsPanel.panel.colorPicker2.texture:SetPoint("TOPLEFT", DiscoHealerOptionsPanel.panel.colorPicker2 ,"TOPLEFT", 1, -1)
+    DiscoHealerOptionsPanel.panel.colorPicker2.texture:SetPoint("BOTTOMRIGHT", DiscoHealerOptionsPanel.panel.colorPicker2 ,"BOTTOMRIGHT", -1, 1)
+    DiscoHealerOptionsPanel.panel.colorPicker2.texture:SetColorTexture(DiscoHealerOptionsPanel.tempSettings.medPrioRGB.r, DiscoHealerOptionsPanel.tempSettings.medPrioRGB.g, DiscoHealerOptionsPanel.tempSettings.medPrioRGB.b)
+    
+    DiscoHealerOptionsPanel.panel.colorPicker2:SetScript("OnMouseDown", function(self, button)
+        selectedColor = DiscoHealerOptionsPanel.tempSettings.medPrioRGB
+        selectedColorPicker = DiscoHealerOptionsPanel.panel.colorPicker2.texture
+        showColorPicker(DiscoHealerOptionsPanel.tempSettings.medPrioRGB.r, DiscoHealerOptionsPanel.tempSettings.medPrioRGB.g, DiscoHealerOptionsPanel.tempSettings.medPrioRGB.b, nil, colorPickerCallback)
+      end)
+
+    -- High Priority
+    DiscoHealerOptionsPanel.panel.colorPicker.highPrioLabel = DiscoHealerOptionsPanel.panel.colorPicker:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.colorPicker.highPrioLabel:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 65, -80)
+    DiscoHealerOptionsPanel.panel.colorPicker.highPrioLabel:SetText("High Priority")
+
+    DiscoHealerOptionsPanel.panel.colorPicker3 = CreateFrame("FRAME", "DiscoColorPicker3", DiscoHealerOptionsPanel.panel)
+    DiscoHealerOptionsPanel.panel.colorPicker3:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 165, -80)
+    DiscoHealerOptionsPanel.panel.colorPicker3:SetSize(40, 20)
+
+    DiscoHealerOptionsPanel.panel.colorPicker3.bgTexture = DiscoHealerOptionsPanel.panel.colorPicker3:CreateTexture(nil, "BACKGROUND")
+    DiscoHealerOptionsPanel.panel.colorPicker3.bgTexture:SetAllPoints(DiscoHealerOptionsPanel.panel.colorPicker3)
+    DiscoHealerOptionsPanel.panel.colorPicker3.bgTexture:SetColorTexture(1, 0.8, 0)
+    
+    DiscoHealerOptionsPanel.panel.colorPicker3.texture = DiscoHealerOptionsPanel.panel.colorPicker3:CreateTexture(nil, "BORDER")
+    DiscoHealerOptionsPanel.panel.colorPicker3.texture:SetPoint("TOPLEFT", DiscoHealerOptionsPanel.panel.colorPicker3 ,"TOPLEFT", 1, -1)
+    DiscoHealerOptionsPanel.panel.colorPicker3.texture:SetPoint("BOTTOMRIGHT", DiscoHealerOptionsPanel.panel.colorPicker3 ,"BOTTOMRIGHT", -1, 1)
+    DiscoHealerOptionsPanel.panel.colorPicker3.texture:SetColorTexture(DiscoHealerOptionsPanel.tempSettings.highPrioRGB.r, DiscoHealerOptionsPanel.tempSettings.highPrioRGB.g, DiscoHealerOptionsPanel.tempSettings.highPrioRGB.b)
+    
+    DiscoHealerOptionsPanel.panel.colorPicker3:SetScript("OnMouseDown", function(self, button)
+        selectedColor = DiscoHealerOptionsPanel.tempSettings.highPrioRGB
+        selectedColorPicker = DiscoHealerOptionsPanel.panel.colorPicker3.texture
+        showColorPicker(DiscoHealerOptionsPanel.tempSettings.highPrioRGB.r, DiscoHealerOptionsPanel.tempSettings.highPrioRGB.g, DiscoHealerOptionsPanel.tempSettings.highPrioRGB.b, nil, colorPickerCallback)
+      end)
+
+
 
 end
 

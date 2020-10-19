@@ -11,6 +11,8 @@ local _remove = table.remove;
 HealEstimator = {}
 local trackedHealers = {}
 local untrackedHealers = {}
+local HealCasts = {}
+local HealRecipients = {}
 --[[
 local directHeals = {
     8936, 5185, 635, 19750, 2060, 596, 2061, 2054, 2050, 1064, 331, 8004,  
@@ -41,10 +43,6 @@ local directHeals = {
     ["Holy Light"] = {castTime =2.5 , spellID = 25292},
     ["Regrowth"] = {castTime = 2, spellID = 9858}
 }
-
-local healCasts = {}
-local healRecipients = {}
-
 --local directHealSpellNames = {}
 
 function HealEstimator:UntrackHealer(unitGUID)
@@ -103,10 +101,10 @@ function HealEstimator:RecordHeal(sourceGUID, estimatedTargetGUID, spellName, st
     }
 
     -- Combat logs out of order
-    if healCasts[sourceGUID] and _abs(startTime - healCasts[sourceGUID].endTime) < 0.2 then
+    if HealCasts[sourceGUID] and _abs(startTime - HealCasts[sourceGUID].endTime) < 0.2 then
         --print("queued")
-        healCasts[sourceGUID].next = newHeal
-        local previousHealRecipientTable = healRecipients[healCasts[sourceGUID].recipient]
+        HealCasts[sourceGUID].next = newHeal
+        local previousHealRecipientTable = HealRecipients[HealCasts[sourceGUID].recipient]
         if previousHealRecipientTable then
             for i=#previousHealRecipientTable.source, 1, -1 do
                 if previousHealRecipientTable.source[i] == sourceGUID then
@@ -117,9 +115,9 @@ function HealEstimator:RecordHeal(sourceGUID, estimatedTargetGUID, spellName, st
             end
         end
     -- Previous heal canceled
-    elseif healCasts[sourceGUID] then
+    elseif HealCasts[sourceGUID] then
         --print("canceled")
-        local previousHealRecipientTable = healRecipients[healCasts[sourceGUID].recipient]
+        local previousHealRecipientTable = HealRecipients[HealCasts[sourceGUID].recipient]
         if previousHealRecipientTable then
             for i=#previousHealRecipientTable.source, 1, -1 do
                 if previousHealRecipientTable.source[i] == sourceGUID then
@@ -129,42 +127,42 @@ function HealEstimator:RecordHeal(sourceGUID, estimatedTargetGUID, spellName, st
                 end
             end
         end
-        healCasts[sourceGUID] = newHeal
+        HealCasts[sourceGUID] = newHeal
     -- Regular new heal
     else
         --print("new heal")
-        healCasts[sourceGUID] = newHeal
+        HealCasts[sourceGUID] = newHeal
     end
 
-    -- Record heal in healRecipients table
+    -- Record heal in HealRecipients table
     if trackedHealers[sourceGUID].correct > 0 and trackedHealers[sourceGUID].correct/trackedHealers[sourceGUID].attempted > 0.5 then
-        if not healRecipients[estimatedTargetGUID] then 
-            healRecipients[estimatedTargetGUID] = {healAmounts = {healAmount}, endTimes = {endTime}, source = {sourceGUID}}
+        if not HealRecipients[estimatedTargetGUID] then 
+            HealRecipients[estimatedTargetGUID] = {healAmounts = {healAmount}, endTimes = {endTime}, source = {sourceGUID}}
         else
-            healRecipients[estimatedTargetGUID].healAmounts[#healRecipients[estimatedTargetGUID].healAmounts + 1] = healAmount
-            healRecipients[estimatedTargetGUID].endTimes[#healRecipients[estimatedTargetGUID].endTimes + 1] = endTime
-            healRecipients[estimatedTargetGUID].source[#healRecipients[estimatedTargetGUID].source + 1] = sourceGUID
+            HealRecipients[estimatedTargetGUID].healAmounts[#HealRecipients[estimatedTargetGUID].healAmounts + 1] = healAmount
+            HealRecipients[estimatedTargetGUID].endTimes[#HealRecipients[estimatedTargetGUID].endTimes + 1] = endTime
+            HealRecipients[estimatedTargetGUID].source[#HealRecipients[estimatedTargetGUID].source + 1] = sourceGUID
         end
     end
 end
 
 -- Called on Heal Landing
 function HealEstimator:VerifyHeal(sourceGUID, targetGUID, spellName, healAmount, crit, time)
-    if not healCasts[sourceGUID] then
+    if not HealCasts[sourceGUID] then
         trackedHealers[sourceGUID].attempted = trackedHealers[sourceGUID].attempted + 1
         return
     end
 
     -- Negative means landing early, positive means late
-    local endDiff = time - healCasts[sourceGUID].endTime
+    local endDiff = time - HealCasts[sourceGUID].endTime
 
     -- Last heal was expired
-    if endDiff > 1 and healCasts[sourceGUID].next then
-        healCasts[sourceGUID] = healCasts[sourceGUID].next
+    if endDiff > 1 and HealCasts[sourceGUID].next then
+        HealCasts[sourceGUID] = HealCasts[sourceGUID].next
     end
 
-    local correctTarget = healCasts[sourceGUID].recipient == targetGUID
-    local correctSpell = healCasts[sourceGUID].spellName == spellName
+    local correctTarget = HealCasts[sourceGUID].recipient == targetGUID
+    local correctSpell = HealCasts[sourceGUID].spellName == spellName
 
     -- Record Heal Amount
     local ha = trackedHealers[sourceGUID].healAmounts[spellName]
@@ -179,10 +177,10 @@ function HealEstimator:VerifyHeal(sourceGUID, targetGUID, spellName, healAmount,
     end
 
     -- Check for queued heal
-    if healCasts[sourceGUID].next then
-        healCasts[sourceGUID] = healCasts[sourceGUID].next
+    if HealCasts[sourceGUID].next then
+        HealCasts[sourceGUID] = HealCasts[sourceGUID].next
     else
-        healCasts[sourceGUID] = nil
+        HealCasts[sourceGUID] = nil
     end
 
     trackedHealers[sourceGUID].attempted = trackedHealers[sourceGUID].attempted + 1
@@ -204,7 +202,8 @@ end
 function HealEstimator:GetHealAmount(targetGUID, endTime)
     local currentTime = GetTime()
     local healAmount = 0
-    healRecipientTable = healRecipients[targetGUID]
+    local healAccuracy = 0
+    local healRecipientTable = HealRecipients[targetGUID]
 
     if healRecipientTable then
         for i=#healRecipientTable.endTimes, 1, -1 do
@@ -213,12 +212,17 @@ function HealEstimator:GetHealAmount(targetGUID, endTime)
                 _remove(healRecipientTable.endTimes, i)
                 _remove(healRecipientTable.source, i)
             elseif endTime == nil or healRecipientTable.endTimes[i] < endTime then
-                healAmount = healAmount + healRecipients[targetGUID].healAmounts[i]
+                local newAmount = HealRecipients[targetGUID].healAmounts[i]
+                healAmount = healAmount + newAmount
+                healAccuracy = healAccuracy + trackedHealers[healRecipientTable.source[i]].correct / trackedHealers[healRecipientTable.source[i]].attempted * newAmount
             end
         end
     end
+    if healAmount > 0 then
+        healAccuracy = healAccuracy / healAmount
+    end
 
-    return healAmount
+    return healAmount, healAccuracy
 end
 
 

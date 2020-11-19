@@ -20,6 +20,7 @@ DiscoHealerOptionsPanel.panel.refresh = function()
 
     --DiscoHealerOptionsPanel.panel.estimateHealsSelector:SetChecked((DiscoHealerOptionsPanel.tempSettings.estimateHeals))
     DiscoHealerOptionsPanel.panel.arrangeByGroupSelector:SetChecked((DiscoHealerOptionsPanel.tempSettings.arrangeByGroup))
+    DiscoHealerOptionsPanel.panel.prioritizeGroupSelector:SetChecked((DiscoHealerOptionsPanel.tempSettings.prioritizeGroup))
 
     if DiscoHealerOptionsPanel.tempSettings.clickAction == "target" then
         UIDropDownMenu_SetText(DiscoHealerOptionsPanel.panel.actionSelector, "Target Player")
@@ -35,6 +36,11 @@ DiscoHealerOptionsPanel.panel.refresh = function()
     DiscoHealerOptionsPanel.panel.spellSelect.box4:SetText(DiscoHealerOptionsPanel.tempSettings.shiftRMacro)
     DiscoHealerOptionsPanel.panel.spellSelect.box5:SetText(DiscoHealerOptionsPanel.tempSettings.ctrlLMacro)
     DiscoHealerOptionsPanel.panel.spellSelect.box6:SetText(DiscoHealerOptionsPanel.tempSettings.ctrlRMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box7:SetText(DiscoHealerOptionsPanel.tempSettings.scrollClickMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box8:SetText(DiscoHealerOptionsPanel.tempSettings.mb4Macro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box9:SetText(DiscoHealerOptionsPanel.tempSettings.mb5Macro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box10:SetText(DiscoHealerOptionsPanel.tempSettings.altLMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box11:SetText(DiscoHealerOptionsPanel.tempSettings.altRMacro)
 
     if not InCombatLockdown() then
         if DiscoSettings.clickAction == "target" then
@@ -62,6 +68,11 @@ DiscoHealerOptionsPanel.panel.okay = function()
     DiscoSettings.shiftRMacro = DiscoHealerOptionsPanel.panel.spellSelect.box4:GetText()
     DiscoSettings.ctrlLMacro = DiscoHealerOptionsPanel.panel.spellSelect.box5:GetText()
     DiscoSettings.ctrlRMacro = DiscoHealerOptionsPanel.panel.spellSelect.box6:GetText()
+    DiscoSettings.scrollClickMacro = DiscoHealerOptionsPanel.panel.spellSelect.box7:GetText()
+    DiscoSettings.mb4Macro = DiscoHealerOptionsPanel.panel.spellSelect.box8:GetText()
+    DiscoSettings.mb5Macro = DiscoHealerOptionsPanel.panel.spellSelect.box9:GetText()
+    DiscoSettings.altLMacro = DiscoHealerOptionsPanel.panel.spellSelect.box10:GetText()
+    DiscoSettings.altRMacro = DiscoHealerOptionsPanel.panel.spellSelect.box11:GetText()
 
     if InCombatLockdown() then
     else
@@ -134,11 +145,24 @@ function generateOptionsPanel()
     DiscoHealerOptionsPanel.panel.arrangeByGroupTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -230, -100)
     DiscoHealerOptionsPanel.panel.arrangeByGroupTitle:SetText("Arrange by group")
 
-    DiscoHealerOptionsPanel.panel.arrangeByGroupSelector = CreateFrame("CHECKBUTTON", "DiscoCheckButton", DiscoHealerOptionsPanel.panel, "ChatConfigCheckButtonTemplate")
+    DiscoHealerOptionsPanel.panel.arrangeByGroupSelector = CreateFrame("CHECKBUTTON", "arrangeByGroupCheckButton", DiscoHealerOptionsPanel.panel, "ChatConfigCheckButtonTemplate")
     DiscoHealerOptionsPanel.panel.arrangeByGroupSelector:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -150, -105)
     DiscoHealerOptionsPanel.panel.arrangeByGroupSelector:SetScript("OnClick", 
     function()
         DiscoHealerOptionsPanel.tempSettings.arrangeByGroup = DiscoHealerOptionsPanel.panel.arrangeByGroupSelector:GetChecked()
+    end
+    );
+
+    -- Prioritize group
+    DiscoHealerOptionsPanel.panel.prioritizeGroupTitle = DiscoHealerOptionsPanel.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.prioritizeGroupTitle:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", -30, -100)
+    DiscoHealerOptionsPanel.panel.prioritizeGroupTitle:SetText("Prioritize group members")
+
+    DiscoHealerOptionsPanel.panel.prioritizeGroupSelector = CreateFrame("CHECKBUTTON", "prioritizeGroupCheckButton", DiscoHealerOptionsPanel.panel, "ChatConfigCheckButtonTemplate")
+    DiscoHealerOptionsPanel.panel.prioritizeGroupSelector:SetPoint("BOTTOM", DiscoHealerOptionsPanel.panel, "TOP", 70, -105)
+    DiscoHealerOptionsPanel.panel.prioritizeGroupSelector:SetScript("OnClick", 
+    function()
+        DiscoHealerOptionsPanel.tempSettings.prioritizeGroup = DiscoHealerOptionsPanel.panel.prioritizeGroupSelector:GetChecked()
     end
     );
     
@@ -285,6 +309,66 @@ function generateOptionsPanel()
     DiscoHealerOptionsPanel.panel.spellSelect.box6:SetText(DiscoHealerOptionsPanel.tempSettings.ctrlRMacro)
     DiscoHealerOptionsPanel.panel.spellSelect.box6:SetCursorPosition(0)
 
+    -- Scroll Wheel Click
+    DiscoHealerOptionsPanel.panel.spellSelect.box7Label = DiscoHealerOptionsPanel.panel.spellSelect:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.spellSelect.box7Label:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "LEFT", 65, -150)
+    DiscoHealerOptionsPanel.panel.spellSelect.box7Label:SetText("Scroll Wheel Click")
+    
+    DiscoHealerOptionsPanel.panel.spellSelect.box7 = CreateFrame("EditBox", "DiscoSpellBox7", DiscoHealerOptionsPanel.panel.spellSelect, "InputBoxTemplate")
+    DiscoHealerOptionsPanel.panel.spellSelect.box7:SetSize(400,20)
+    DiscoHealerOptionsPanel.panel.spellSelect.box7:SetAutoFocus(false)
+    DiscoHealerOptionsPanel.panel.spellSelect.box7:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "CENTER", 10, -150)
+    DiscoHealerOptionsPanel.panel.spellSelect.box7:SetText(DiscoHealerOptionsPanel.tempSettings.scrollClickMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box7:SetCursorPosition(0)
+
+    -- MB4 (back)
+    DiscoHealerOptionsPanel.panel.spellSelect.box8Label = DiscoHealerOptionsPanel.panel.spellSelect:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.spellSelect.box8Label:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "LEFT", 65, -175)
+    DiscoHealerOptionsPanel.panel.spellSelect.box8Label:SetText("MB4 (back)")
+    
+    DiscoHealerOptionsPanel.panel.spellSelect.box8 = CreateFrame("EditBox", "DiscoSpellBox8", DiscoHealerOptionsPanel.panel.spellSelect, "InputBoxTemplate")
+    DiscoHealerOptionsPanel.panel.spellSelect.box8:SetSize(400,20)
+    DiscoHealerOptionsPanel.panel.spellSelect.box8:SetAutoFocus(false)
+    DiscoHealerOptionsPanel.panel.spellSelect.box8:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "CENTER", 10, -175)
+    DiscoHealerOptionsPanel.panel.spellSelect.box8:SetText(DiscoHealerOptionsPanel.tempSettings.mb4Macro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box8:SetCursorPosition(0)
+
+    -- MB5 (forward)
+    DiscoHealerOptionsPanel.panel.spellSelect.box9Label = DiscoHealerOptionsPanel.panel.spellSelect:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.spellSelect.box9Label:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "LEFT", 65, -200)
+    DiscoHealerOptionsPanel.panel.spellSelect.box9Label:SetText("MB5 (forwards)")
+    
+    DiscoHealerOptionsPanel.panel.spellSelect.box9 = CreateFrame("EditBox", "DiscoSpellBox9", DiscoHealerOptionsPanel.panel.spellSelect, "InputBoxTemplate")
+    DiscoHealerOptionsPanel.panel.spellSelect.box9:SetSize(400,20)
+    DiscoHealerOptionsPanel.panel.spellSelect.box9:SetAutoFocus(false)
+    DiscoHealerOptionsPanel.panel.spellSelect.box9:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "CENTER", 10, -200)
+    DiscoHealerOptionsPanel.panel.spellSelect.box9:SetText(DiscoHealerOptionsPanel.tempSettings.mb5Macro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box9:SetCursorPosition(0)
+
+    -- Alt Left
+    DiscoHealerOptionsPanel.panel.spellSelect.box10Label = DiscoHealerOptionsPanel.panel.spellSelect:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.spellSelect.box10Label:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "LEFT", 65, -225)
+    DiscoHealerOptionsPanel.panel.spellSelect.box10Label:SetText("Alt Left Click")
+    
+    DiscoHealerOptionsPanel.panel.spellSelect.box10 = CreateFrame("EditBox", "DiscoSpellBox10", DiscoHealerOptionsPanel.panel.spellSelect, "InputBoxTemplate")
+    DiscoHealerOptionsPanel.panel.spellSelect.box10:SetSize(400,20)
+    DiscoHealerOptionsPanel.panel.spellSelect.box10:SetAutoFocus(false)
+    DiscoHealerOptionsPanel.panel.spellSelect.box10:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "CENTER", 10, -225)
+    DiscoHealerOptionsPanel.panel.spellSelect.box10:SetText(DiscoHealerOptionsPanel.tempSettings.altLMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box10:SetCursorPosition(0)
+
+    -- Alt Right
+    DiscoHealerOptionsPanel.panel.spellSelect.box11Label = DiscoHealerOptionsPanel.panel.spellSelect:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    DiscoHealerOptionsPanel.panel.spellSelect.box11Label:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "LEFT", 65, -250)
+    DiscoHealerOptionsPanel.panel.spellSelect.box11Label:SetText("Alt Right Click")
+    
+    DiscoHealerOptionsPanel.panel.spellSelect.box11 = CreateFrame("EditBox", "DiscoSpellBox11", DiscoHealerOptionsPanel.panel.spellSelect, "InputBoxTemplate")
+    DiscoHealerOptionsPanel.panel.spellSelect.box11:SetSize(400,20)
+    DiscoHealerOptionsPanel.panel.spellSelect.box11:SetAutoFocus(false)
+    DiscoHealerOptionsPanel.panel.spellSelect.box11:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.spellSelect, "CENTER", 10, -250)
+    DiscoHealerOptionsPanel.panel.spellSelect.box11:SetText(DiscoHealerOptionsPanel.tempSettings.altRMacro)
+    DiscoHealerOptionsPanel.panel.spellSelect.box11:SetCursorPosition(0)
+
     -- Color Picker
     local selectedColor
     local selectedColorPicker
@@ -323,11 +407,11 @@ function generateOptionsPanel()
 
     -- Low Priority
     DiscoHealerOptionsPanel.panel.colorPicker.lowPrioLabel = DiscoHealerOptionsPanel.panel.colorPicker:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    DiscoHealerOptionsPanel.panel.colorPicker.lowPrioLabel:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 65, 0)
+    DiscoHealerOptionsPanel.panel.colorPicker.lowPrioLabel:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 65, -80)
     DiscoHealerOptionsPanel.panel.colorPicker.lowPrioLabel:SetText("Low Priority")
 
     DiscoHealerOptionsPanel.panel.colorPicker1 = CreateFrame("FRAME", "DiscoColorPicker1", DiscoHealerOptionsPanel.panel)
-    DiscoHealerOptionsPanel.panel.colorPicker1:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 165, 0)
+    DiscoHealerOptionsPanel.panel.colorPicker1:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 140, -80)
     DiscoHealerOptionsPanel.panel.colorPicker1:SetSize(40, 20)
 
     DiscoHealerOptionsPanel.panel.colorPicker1.bgTexture = DiscoHealerOptionsPanel.panel.colorPicker1:CreateTexture(nil, "BACKGROUND")
@@ -347,11 +431,11 @@ function generateOptionsPanel()
 
     -- Medium Priority
     DiscoHealerOptionsPanel.panel.colorPicker.medPrioLabel = DiscoHealerOptionsPanel.panel.colorPicker:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    DiscoHealerOptionsPanel.panel.colorPicker.medPrioLabel:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 65, -40)
+    DiscoHealerOptionsPanel.panel.colorPicker.medPrioLabel:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 265, -80)
     DiscoHealerOptionsPanel.panel.colorPicker.medPrioLabel:SetText("Medium Priority")
 
     DiscoHealerOptionsPanel.panel.colorPicker2 = CreateFrame("FRAME", "DiscoColorPicker2", DiscoHealerOptionsPanel.panel)
-    DiscoHealerOptionsPanel.panel.colorPicker2:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 165, -40)
+    DiscoHealerOptionsPanel.panel.colorPicker2:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 340, -80)
     DiscoHealerOptionsPanel.panel.colorPicker2:SetSize(40, 20)
 
     DiscoHealerOptionsPanel.panel.colorPicker2.bgTexture = DiscoHealerOptionsPanel.panel.colorPicker2:CreateTexture(nil, "BACKGROUND")
@@ -371,11 +455,11 @@ function generateOptionsPanel()
 
     -- High Priority
     DiscoHealerOptionsPanel.panel.colorPicker.highPrioLabel = DiscoHealerOptionsPanel.panel.colorPicker:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    DiscoHealerOptionsPanel.panel.colorPicker.highPrioLabel:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 65, -80)
+    DiscoHealerOptionsPanel.panel.colorPicker.highPrioLabel:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 465, -80)
     DiscoHealerOptionsPanel.panel.colorPicker.highPrioLabel:SetText("High Priority")
 
     DiscoHealerOptionsPanel.panel.colorPicker3 = CreateFrame("FRAME", "DiscoColorPicker3", DiscoHealerOptionsPanel.panel)
-    DiscoHealerOptionsPanel.panel.colorPicker3:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 165, -80)
+    DiscoHealerOptionsPanel.panel.colorPicker3:SetPoint("CENTER", DiscoHealerOptionsPanel.panel.colorPicker, "LEFT", 540, -80)
     DiscoHealerOptionsPanel.panel.colorPicker3:SetSize(40, 20)
 
     DiscoHealerOptionsPanel.panel.colorPicker3.bgTexture = DiscoHealerOptionsPanel.panel.colorPicker3:CreateTexture(nil, "BACKGROUND")

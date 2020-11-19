@@ -29,6 +29,15 @@ local directHeals = {
 }
 ]]
 
+local hotHeals = {
+    -- Rejuvenation
+    [774]="", [1058]="", [1430]="", [2090]="", [2091]="", [3627]="", [8910]="", [9839]="", [9840]="", [9841]="", [25299]="",
+    -- Regrowth
+    [8936]="", [8938]="", [8939]="", [8940]="", [8941]="", [9750]="", [9856]="", [9857]="", [9858]="",
+    -- Renew
+    [139]="", [6074]="", [6075]="", [6076]="", [6077]="", [6078]="", [10927]="", [10928]="", [10929]="", [25315]=""
+}
+
 local directHeals = {
     ["Healing Touch"] = {castTime = 3, spellID = 25297},
     ["Greater Heal"] = {castTime = 2.5, spellID = 25314},
@@ -67,7 +76,7 @@ end
 function HealEstimator:ListTrackedHealers()
     for unitGUID, val in pairs(trackedHealers) do
         local localizedClass, englishClass, localizedRace, englishRace, sex, name, realm = GetPlayerInfoByGUID(unitGUID)
-        --print(name, " accuracy: ", val.correct / val.attempted, " total: ", val.attempted)
+        print(name, " accuracy: ", val.correct / val.attempted, " total: ", val.attempted)
     end
 end
 
@@ -86,6 +95,10 @@ function HealEstimator:IsDirectHeal(spellName)
     return directHeals[spellName]
     
 
+end
+
+function HealEstimator:IsHotHeal(spellID)
+    return hotHeals[spellID]
 end
 
 -- Record a new incomming heal

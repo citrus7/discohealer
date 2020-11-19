@@ -10,8 +10,10 @@ libs\LibStub\LibStub.lua
 libs\LibHealComm-4.0\libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
 libs\LibHealComm-4.0\LibHealComm-4.0.lua
 libs\LibCombatLogHealth-1.0\LibCombatLogHealth-1.0.lua
+#libs\LibInstantHealth-1.0\LibInstantHealth-1.0.lua
 
 #HealIndicator.lua
+queue.lua
 healEstimator.lua
 optionsPanel.lua
 frameDisplayLib.lua

@@ -1,4 +1,5 @@
 local addonName, discoVars = ...
+local LibCLHealth = LibStub("LibCombatLogHealth-1.0")
 
 -- Initialize the main DiscoHealer frame
 function generateMainDiscoFrame(mainFrame)
@@ -8,7 +9,11 @@ function generateMainDiscoFrame(mainFrame)
     mainFrame:EnableMouse(true)
     mainFrame:RegisterForDrag("LeftButton")
     mainFrame:SetPoint("CENTER", UIParent, "CENTER")
-    mainFrame:SetScript("OnDragStart", mainFrame.StartMoving)
+    mainFrame:SetScript("OnDragStart", function()
+        if not DiscoSettings.locked then
+            mainFrame:StartMoving()
+        end
+    end)
     mainFrame:SetScript("OnDragStop", mainFrame.StopMovingOrSizing)
     if not mainFrame.texture then mainFrame.texture = mainFrame:CreateTexture(nil, "BACKGROUND"); end
     mainFrame.texture:SetAllPoints(mainFrame)
@@ -17,11 +22,11 @@ function generateMainDiscoFrame(mainFrame)
 
     -- Handle Bar
     if not mainFrame.handleBar then mainFrame.handleBar = CreateFrame("FRAME", "DiscoHandleBar", mainFrame); end
-    mainFrame.handleBar:SetSize(15*fs, 40*fs)
+    mainFrame.handleBar:SetSize(15*fs, 55*fs)
     mainFrame.handleBar:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", 15*fs, 0*fs)
 
     mainFrame.handleBar:SetScript("OnMouseDown", function(self, button)
-        if button == "LeftButton" and not mainFrame.isMoving then
+        if button == "LeftButton" and not mainFrame.isMoving and not DiscoSettings.locked then
             mainFrame:StartMoving();
             mainFrame.isMoving = true;
         end
@@ -40,7 +45,7 @@ function generateMainDiscoFrame(mainFrame)
 
     -- Disco Settings Button
     if not mainFrame.handleBar.textDFrame then mainFrame.handleBar.textDFrame = CreateFrame("FRAME", "DiscoHandleBarTextDFrame", mainFrame.handleBar); end
-    mainFrame.handleBar.textDFrame:SetPoint("CENTER", mainFrame.handleBar, "CENTER", 0, -5*fs)
+    mainFrame.handleBar.textDFrame:SetPoint("CENTER", mainFrame.handleBar, "TOP", 0, -38*fs)
     mainFrame.handleBar.textDFrame:SetSize(15*fs, 15*fs)
     if not mainFrame.handleBar.textDFrame.text then mainFrame.handleBar.textDFrame.text = mainFrame.handleBar.textDFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal"); end
     mainFrame.handleBar.textDFrame.text:SetPoint("CENTER", mainFrame.handleBar.textDFrame, "CENTER", 0, 0)
@@ -62,34 +67,37 @@ function generateMainDiscoFrame(mainFrame)
     
 
     -- Disco Minimize Button
+    local discoMinimizeAlpha = 0.3
     if not mainFrame.handleBar.textMinFrame then mainFrame.handleBar.textMinFrame = CreateFrame("FRAME", "DiscoHandleBarTextDFrame", mainFrame.handleBar); end
-    mainFrame.handleBar.textMinFrame:SetPoint("CENTER", mainFrame.handleBar, "CENTER", 0, -15*fs)
+    mainFrame.handleBar.textMinFrame:SetPoint("CENTER", mainFrame.handleBar, "TOP", 0, -48*fs)
     mainFrame.handleBar.textMinFrame:SetSize(15*fs, 15*fs)
     if not mainFrame.handleBar.textMinFrame.text then mainFrame.handleBar.textMinFrame.text = mainFrame.handleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal"); end
     mainFrame.handleBar.textMinFrame.text:SetPoint("CENTER", mainFrame.handleBar.textMinFrame, "CENTER", 0, 0)
+    mainFrame.handleBar.textMinFrame.text:SetTextColor(0.8, 0.8, 0.8)
     if DiscoSettings.minimized then
         mainFrame.handleBar.textMinFrame.text:SetText("+")
+        discoMinimizeAlpha = 1
     else
         mainFrame.handleBar.textMinFrame.text:SetText("-")
+        discoMinimizeAlpha = 0.3
     end
-    mainFrame.handleBar.textMinFrame.text:SetTextColor(0.4, 0.4, 0.4)
-    mainFrame.handleBar.textMinFrame.text:SetAlpha(0.3)
+    mainFrame.handleBar.textMinFrame.text:SetAlpha(discoMinimizeAlpha)
     mainFrame.handleBar.textMinFrame:SetScript("OnEnter", function(self, button)
-        self.text:SetTextColor(1, 1, 1)
-        self.text:SetAlpha(0.6)
+        self.text:SetAlpha(1)
       end)
     mainFrame.handleBar.textMinFrame:SetScript("OnLeave", function(self, button)
-        self.text:SetTextColor(0.4, 0.4, 0.4)
-        self.text:SetAlpha(0.3)
+        self.text:SetAlpha(discoMinimizeAlpha)
     end)
     mainFrame.handleBar.textMinFrame:SetScript("OnMouseUp", function(self, button)
         if not InCombatLockdown() then
             DiscoSettings.minimized = not DiscoSettings.minimized
             if DiscoSettings.minimized then
                 mainFrame.handleBar.textMinFrame.text:SetText("+")
+                discoMinimizeAlpha = 1
                 minimizeFrames(discoVars.discoMainFrame, discoVars.discoSubframes, discoVars.discoOverlaySubframes)
             else
                 mainFrame.handleBar.textMinFrame.text:SetText("-")
+                discoMinimizeAlpha = 0.3
                 recreateAllSubFrames(discoVars.discoSubframes, discoVars.discoOverlaySubframes, discoVars.discoMainFrame, discoVars.allPartyMembers)
             end
         end
@@ -97,7 +105,7 @@ function generateMainDiscoFrame(mainFrame)
 
     -- Disco Move Button
     if not mainFrame.handleBar.moveTextureFrame then mainFrame.handleBar.moveTextureFrame = CreateFrame("FRAME", "DiscoHandleBarMoveFrame", mainFrame.handleBar); end
-    mainFrame.handleBar.moveTextureFrame:SetPoint("CENTER", mainFrame.handleBar, "CENTER", 0, 9*fs)
+    mainFrame.handleBar.moveTextureFrame:SetPoint("CENTER", mainFrame.handleBar, "TOP", 0, -10*fs)
     mainFrame.handleBar.moveTextureFrame:SetSize(15*fs, 15*fs)
     mainFrame.handleBar.moveTextureFrame:SetAlpha(0.7)
     if not mainFrame.handleBar.moveTextureFrame.texture then mainFrame.handleBar.moveTextureFrame.texture = mainFrame.handleBar.moveTextureFrame:CreateTexture(nil, "BORDER"); end
@@ -111,7 +119,7 @@ function generateMainDiscoFrame(mainFrame)
         self.texture:SetTexture("Interface/AddOns/DiscoHealer/assets/move")
         end)
     mainFrame.handleBar.moveTextureFrame:SetScript("OnMouseDown", function(self, button)
-        if button == "LeftButton" and not mainFrame.isMoving then
+        if button == "LeftButton" and not mainFrame.isMoving and not DiscoSettings.locked then
             mainFrame:StartMoving();
             mainFrame.isMoving = true;
         end
@@ -122,6 +130,36 @@ function generateMainDiscoFrame(mainFrame)
             mainFrame.isMoving = false;
         end
         end)
+
+    -- Disco Lock Button
+    if not mainFrame.handleBar.lockTextureFrame then mainFrame.handleBar.lockTextureFrame = CreateFrame("FRAME", "DiscoHandleBarLockFrame", mainFrame.handleBar); end
+    mainFrame.handleBar.lockTextureFrame:SetPoint("CENTER", mainFrame.handleBar, "TOP", 0, -25*fs)
+    mainFrame.handleBar.lockTextureFrame:SetSize(15*fs, 15*fs)
+    mainFrame.handleBar.lockTextureFrame:SetAlpha(0.2)
+    if not mainFrame.handleBar.lockTextureFrame.texture then mainFrame.handleBar.lockTextureFrame.texture = mainFrame.handleBar.lockTextureFrame:CreateTexture(nil, "BORDER"); end
+    if DiscoSettings.locked then
+        mainFrame.handleBar.lockTextureFrame.texture:SetTexture("Interface/AddOns/DiscoHealer/assets/lock")
+    else
+        mainFrame.handleBar.lockTextureFrame.texture:SetTexture("Interface/AddOns/DiscoHealer/assets/unlock")
+    end
+    mainFrame.handleBar.lockTextureFrame.texture:SetSize(12*fs, 12*fs)
+    mainFrame.handleBar.lockTextureFrame.texture:SetPoint("CENTER", mainFrame.handleBar.lockTextureFrame, "CENTER", 0, 0)
+    mainFrame.handleBar.lockTextureFrame:SetScript("OnEnter", function(self, button)
+        self:SetAlpha(0.7)
+        end)
+    mainFrame.handleBar.lockTextureFrame:SetScript("OnLeave", function(self, button)
+        self:SetAlpha(0.2)
+        end)
+    mainFrame.handleBar.lockTextureFrame:SetScript("OnMouseUp", function(self, button)
+        if not InCombatLockdown() then
+            DiscoSettings.locked = not DiscoSettings.locked
+            if DiscoSettings.locked then
+                mainFrame.handleBar.lockTextureFrame.texture:SetTexture("Interface/AddOns/DiscoHealer/assets/lock")
+            else
+                mainFrame.handleBar.lockTextureFrame.texture:SetTexture("Interface/AddOns/DiscoHealer/assets/unlock")
+            end
+        end
+            end)
     
 end
 
@@ -134,10 +172,12 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         titlePadding = -15 * fs
     end
 
-    local function createSubFrame(i, subframes, frameType)
+    local function createSubFrame(i, subframes, overlaySubframes, frameType)
         local key = i
         if frameType == "large" then
             key = "large" .. i
+        elseif frameType == "group" then
+            key = "group" .. i
         end
 
         -- Generate subframes
@@ -195,6 +235,9 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].subtext:SetPoint("BOTTOM", subframes[key], "TOP", 0, -23*fs)
         subframes[key].subtext:SetTextColor(0.8, 0.8, 0.8)
 
+        --generateDebuffFrames(subframes[key], 3, "debuff")
+        generateDebuffFrames(subframes[key], 3, "buff")
+
         if frameType == "large" then
             subframes[key]:SetSize(100*fs, 25*fs)
             subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%5*100*fs, math.floor((i-0.1)/5)*-25*fs-2*fs)
@@ -207,6 +250,18 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key].overhealBar:SetSize(97*fs, 5*fs)
 
             subframes[key].defaultAlpha = 0.1
+        elseif frameType == "group" then
+                subframes[key]:SetSize(100*fs, 25*fs)
+                subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", 0, i*-25*fs-2*fs + titlePadding)
+    
+                subframes[key].texture:SetSize(97*fs, 22*fs)
+                subframes[key].healthBar:SetSize(97*fs, 22*fs)
+                subframes[key].healBar:SetSize(97*fs, 22*fs)
+                subframes[key].playerHealBar:SetSize(97*fs, 22*fs)
+                subframes[key].otherHealBar:SetSize(97*fs, 22*fs)
+                subframes[key].overhealBar:SetSize(97*fs, 5*fs)
+    
+                subframes[key].defaultAlpha = 0.1
         else
             subframes[key]:SetSize(50*fs, 25*fs)
             subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*50*fs, math.floor((i-0.1)/10)*-25*fs-28*fs + titlePadding)
@@ -217,8 +272,6 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key].playerHealBar:SetSize(47*fs, 22*fs)
             subframes[key].otherHealBar:SetSize(47*fs, 22*fs)
             subframes[key].overhealBar:SetSize(47*fs, 5*fs)
-            subframes[key].text:SetAlpha(0.7)
-            subframes[key].subtext:SetAlpha(0.7)
             
             if not DiscoSettings.showNames then
                 subframes[key].text:Hide()
@@ -229,16 +282,31 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
 
         -- Frame alpha settings
         subframes[key].alpha = subframes[key].defaultAlpha
+        subframes[key].overlayFrame = overlaySubframes[key]
         subframes[key].SetHidden = function(self)
-            self:SetAlpha(self.alpha)
+            --self:SetAlpha(self.alpha)
+            self:SetSubframeAlpha(self.alpha)
+        end
+        subframes[key].SetSubframeAlpha = function(self, alpha)
+            self:SetAlpha(alpha)
+            if alpha > 0.5 then
+                self.overlayFrame.nameText:SetAlpha(1)
+            elseif subframes[key].inRange then
+                self.overlayFrame.nameText:SetAlpha(0.5)
+            else
+                self.overlayFrame.nameText:SetAlpha(0.15)
+            end
         end
     end
 
     -- Generate overlay for frame
     local function createSubFrameOverlay(i, subframes, frameType, discoSettings)
+        local fs = DiscoSettings.frameSize or 1
         local key
         if frameType == "large" then
             key = "large" .. i
+        elseif frameType == "group" then
+            key = "group" .. i
         else
             key = i
         end
@@ -250,7 +318,7 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
 
         if not subframes[key].threatFrame then subframes[key].threatFrame = CreateFrame("FRAME", "DiscoThreatOverlay"..key, subframes[key]); end
         subframes[key].threatFrame:SetPoint("CENTER", subframes[key], "TOPLEFT", 7*fs, -7*fs)
-        subframes[key].threatFrame:SetSize(12, 12)
+        subframes[key].threatFrame:SetSize(12*fs, 12*fs)
         subframes[key].threatFrame:SetAlpha(0)
 
         if not subframes[key].textureH then subframes[key].textureH = subframes[key].threatFrame:CreateTexture(nil, "BACKGROUND"); end
@@ -279,25 +347,25 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].targetedL:SetColorTexture(0.9,0.9,0.9,1)
         subframes[key].targetedL:SetStartPoint("TOPLEFT",0,0)
         subframes[key].targetedL:SetEndPoint("BOTTOMLEFT",0,0)
-        subframes[key].targetedL:SetThickness(1)
+        subframes[key].targetedL:SetThickness(1*fs)
 
         if not subframes[key].targetedD then subframes[key].targetedD = subframes[key].targeted:CreateLine(); end
         subframes[key].targetedD:SetColorTexture(0.9,0.9,0.9,1)
         subframes[key].targetedD:SetStartPoint("BOTTOMLEFT",0,0)
         subframes[key].targetedD:SetEndPoint("BOTTOMRIGHT",0,0)
-        subframes[key].targetedD:SetThickness(1)
+        subframes[key].targetedD:SetThickness(1*fs)
 
         if not subframes[key].targetedR then subframes[key].targetedR = subframes[key].targeted:CreateLine(); end
         subframes[key].targetedR:SetColorTexture(0.9,0.9,0.9,1)
         subframes[key].targetedR:SetStartPoint("TOPRIGHT",0,0)
         subframes[key].targetedR:SetEndPoint("BOTTOMRIGHT",0,0)
-        subframes[key].targetedR:SetThickness(1)
+        subframes[key].targetedR:SetThickness(1*fs)
 
         if not subframes[key].targetedU then subframes[key].targetedU = subframes[key].targeted:CreateLine(); end
         subframes[key].targetedU:SetColorTexture(0.9,0.9,0.9,1)
         subframes[key].targetedU:SetStartPoint("TOPLEFT",0,0)
         subframes[key].targetedU:SetEndPoint("TOPRIGHT",0,0)
-        subframes[key].targetedU:SetThickness(1)
+        subframes[key].targetedU:SetThickness(1*fs)
         subframes[key].targeted:SetAlpha(0)
 
         if not subframes[key].resurrect then subframes[key].resurrect = subframes[key]:CreateTexture(nil, "BORDER"); end
@@ -312,11 +380,13 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
         subframes[key].arrow:SetPoint("CENTER", subframes[key], "CENTER", 0, 0)
         subframes[key].arrow:SetAlpha(0)
 
+        if not subframes[key].nameText then subframes[key].nameText = subframes[key]:CreateFontString(nil, "OVERLAY", "GameFontNormal"); end
+        subframes[key].nameText:SetPoint("CENTER", subframes[key], "CENTER", 0, 0)
+
         if not subframes[key].mindControl then subframes[key].mindControl = subframes[key]:CreateFontString(nil, "OVERLAY", "GameFontNormal"); end
         subframes[key].mindControl:SetText("(MC)")
         --subframes[key].mindControl:SetTextColor(0.4, 0.4, 0.4)
         subframes[key].mindControl:SetPoint("CENTER", subframes[key], "CENTER", 0, 0)
-        subframes[key].mindControl:SetAlpha(0)
 
 
         -- CastBar Animation
@@ -351,6 +421,13 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
             subframes[key].threatAlphaMedium = 0.75
             subframes[key].threatAlphaHigh = 0.75
             subframes[key].castBarFrame.size = 100
+        elseif frameType == "group" then
+                subframes[key]:SetSize(100*fs, 25*fs)
+                subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", 0, i*-25*fs-2*fs + titlePadding)
+                subframes[key].targeted:SetSize(100*fs, 3.5*fs)
+                subframes[key].threatAlphaMedium = 0.75
+                subframes[key].threatAlphaHigh = 0.75
+                subframes[key].castBarFrame.size = 100
         else
             subframes[key]:SetSize(50*fs, 25*fs)
             subframes[key]:SetPoint("TOPLEFT", discoMainFrame, "TOPLEFT", (i-1)%10*50*fs, math.floor((i-0.1)/10)*-25*fs-25*fs-2*fs + titlePadding)
@@ -383,16 +460,63 @@ function generateDiscoSubframes(subframes, overlaySubframes, discoMainFrame)
 
     -- Generate all large and regular subframes
     for i=1, 60 do
-        createSubFrame(i, subframes, nil)
         createSubFrameOverlay(i, overlaySubframes, nil)
+        createSubFrame(i, subframes, overlaySubframes, nil)
     end
 
     for i=1, 10 do
-        createSubFrame(i, subframes, "large")
         createSubFrameOverlay(i, overlaySubframes, "large")
+        createSubFrame(i, subframes, overlaySubframes, "large")
+    end
+
+    for i=1, 6 do
+        createSubFrameOverlay(i, overlaySubframes, "group")
+        createSubFrame(i, subframes, overlaySubframes, "group")
     end
 
     createLabels(discoMainFrame)
+end
+
+function generateDebuffFrames(subframe, n, type)
+    local fs = DiscoSettings.frameSize
+    for i=1, n do
+        local key = "buff" .. i
+        if type == "debuff" then key = "debuff" .. i; end
+
+        if not subframe[key] then subframe[key] = CreateFrame("FRAME", nil, subframe); end
+        if type == "debuff" then
+            subframe[key]:SetPoint("CENTER", subframe, "TOPLEFT", (7 + i*9)*fs, -7*fs)
+        else
+            subframe[key]:SetPoint("CENTER", subframe, "TOPRIGHT", (3 - i*9)*fs, -6*fs)
+        end
+
+        subframe[key]:SetFrameStrata("MEDIUM")
+        subframe[key]:SetFrameLevel(500)
+        subframe[key]:SetSize(8*fs, 8*fs)
+        --subframe[key]:SetAlpha(1)
+        if not subframe[key].texture then subframe[key].texture = subframe[key]:CreateTexture(nil, "BORDER"); end
+        subframe[key].texture:SetAllPoints(subframe[key])
+        --subframe[key].texture:SetColorTexture(1,0,0)
+        --subframe[key].texture:SetColorTexture(0,1,0);
+        --subframe[key].texture:SetColorTexture(0,0,1);
+
+    end
+
+end
+
+local function setSubframeValues(subframe, unitID)
+    local unitHealth = LibCLHealth.UnitHealth(unitID)
+    local maxHealth = UnitHealthMax(unitID)
+
+    discoVars.playerMapping[UnitGUID(unitID)].unitHealth = unitHealth
+    discoVars.playerMapping[UnitGUID(unitID)].maxHealth = maxHealth
+
+    subframe.healthBar:SetMinMaxValues(0, maxHealth)
+    subframe.healBar:SetMinMaxValues(0, maxHealth)
+    subframe.playerHealBar:SetMinMaxValues(0, maxHealth)
+    subframe.otherHealBar:SetMinMaxValues(0, maxHealth)
+    subframe.overhealBar:SetMinMaxValues(0, maxHealth)
+    subframe.overhealBar:SetValue(0)
 end
 
 -- Redraw all the subframes when the party changes
@@ -403,43 +527,96 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
     local fs = DiscoSettings.frameSize
 
     local partySize = GetNumGroupMembers()
-    discoVars.playerMapping = {[UnitGUID("player")]={key="large1", unitName=UnitName("player"), unitIDs={player=""}}}
-    subframes["large1"].text:SetText(UnitName("player"))
+    discoVars.playerMapping = {[UnitGUID("player")]={
+        key="large1", 
+        unitName=UnitName("player"), 
+        isPlayer = true, 
+        unitIDs={player=""}}
+    }
+    --subframes["large1"].text:SetText(UnitName("player"))
+    overlayFrames["large1"].nameText:SetText(UnitName("player"))
     -- Create player mapping
     local j,k= 2,1
     local pets = {}
 
     local playerIndex = UnitInRaid("player")
-    local groupKeys = {}
     local playerGroup
+    if playerIndex then
+        playerGroup = (select(3, GetRaidRosterInfo(playerIndex)))
+    end
+    local groupKeys = {}
+    local nextPlayerGroupKey = 1
+    local nextGroupKey = 1
+    local allPartyMembersSorted = {}
+
+    -- Sort all party members by group
+    for i=1, 8 do
+        for j=1, #allPartyMembers do
+            local unitID = allPartyMembers[j]
+            local unitIndex = UnitInRaid(unitID)
+            local unitGroup
+            if unitIndex then
+                unitGroup = (select(3, GetRaidRosterInfo(unitIndex)))
+            end
+            if unitGroup == i then
+                allPartyMembersSorted[#allPartyMembersSorted + 1] = unitID
+            end
+        end
+    end
+    for i=1, #allPartyMembers do
+        local unitID = allPartyMembers[i]
+        local unitIndex = UnitInRaid(unitID)
+        if not unitIndex then
+            allPartyMembersSorted[#allPartyMembersSorted + 1] = unitID
+        end
+    end
 
     -- Find all main tanks
     for _, key in pairs(allPartyMembers) do
         if not string.find(key, "pet") then
             local framekey
             --local index = string.match (key, "%d+")
-            local index = UnitInRaid(key)
+            local unitIndex = UnitInRaid(key)
             local isRaidMember = string.find(key, "raid")==1
-            local isTank = index and isRaidMember and ((select(10, GetRaidRosterInfo(index))) == "MAINTANK")
+            local isTank = unitIndex and isRaidMember and ((select(10, GetRaidRosterInfo(unitIndex))) == "MAINTANK")
 
-            if partySize < 6 or isTank and j < 11 then
+            if partySize < 6 or (isTank and j < 11) then
                 if discoVars.playerMapping[UnitGUID(key)] then
                     discoVars.playerMapping[UnitGUID(key)].unitIDs[key] = ""
-                else
+                elseif isTank or partySize < 6 then
                     frameKey = "large" .. j
                     j=j+1
-                    subframes[frameKey].text:SetText(UnitName(key))
-                    discoVars.playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}, isPriority=isTank}
+                    --subframes[frameKey].text:SetText(UnitName(key))
+                    overlayFrames[frameKey].nameText:SetText(UnitName(key))
+                    discoVars.playerMapping[UnitGUID(key)] = {
+                        key=frameKey, 
+                        unitName=UnitName(key), 
+                        unitIDs={[key]=""}, 
+                        isPriority=isTank,
+                    }
                 end
+                --[[
+                    frameKey = "group" .. nextPlayerGroupKey
+                    nextPlayerGroupKey = nextPlayerGroupKey + 1
+                    subframes[frameKey].text:SetText(UnitName(key))
+                    discoVars.playerMapping[UnitGUID(key)] = {
+                        key=frameKey, 
+                        unitName=UnitName(key), 
+                        unitIDs={[key]=""}, 
+                        isPriority=true,
+                    }
+                end
+                ]]
             end
         end
     end
 
-    local nextGroupKey = 1
-
     -- Two rows of tanks
     if j > 6 then 
         k = 11
+        subframes["group1"]:Hide()
+        overlayFrames["group1"]:Hide()
+        nextPlayerGroupKey = 2
         nextGroupKey = 11
         for i=1, 10 do
             key = "label" .. i
@@ -452,24 +629,68 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
         end
     end
 
-    if playerIndex and partySize > 5 then
-        playerGroup = (select(3, GetRaidRosterInfo(playerIndex)))
+    if playerGroup and partySize > 5 then
         mainframe.groupLabels.label1:SetText("Grp " .. playerGroup)
         mainframe.groupLabels.label1:Show()
         groupKeys[playerGroup] = nextGroupKey
         nextGroupKey = nextGroupKey + 1
     end
 
-    -- Find all regular party members and pets
-    for _, key in pairs(allPartyMembers) do
+    -- Find priority group members
+    if DiscoSettings.prioritizeGroup and DiscoSettings.arrangeByGroup then
+        for _, key in pairs(allPartyMembers) do
+            if not string.find(key, "pet") then
+                local framekey
+                --local index = string.match (key, "%d+")
+                local unitIndex = UnitInRaid(key)
+                local isRaidMember = string.find(key, "raid")==1
+                local isTank = unitIndex and isRaidMember and ((select(10, GetRaidRosterInfo(unitIndex))) == "MAINTANK")
+                local unitGroup
+                if unitIndex then
+                    unitGroup = (select(3, GetRaidRosterInfo(unitIndex)))
+                end
+
+                if partySize > 6 and not isTank and (DiscoSettings.prioritizeGroup and DiscoSettings.arrangeByGroup and unitGroup == playerGroup) then
+                    if discoVars.playerMapping[UnitGUID(key)] then
+                        discoVars.playerMapping[UnitGUID(key)].unitIDs[key] = ""
+                    else
+                        frameKey = "group" .. nextPlayerGroupKey
+                        nextPlayerGroupKey = nextPlayerGroupKey + 1
+                        --subframes[frameKey].text:SetText(UnitName(key))
+                        overlayFrames[frameKey].nameText:SetText(UnitName(key))
+                        discoVars.playerMapping[UnitGUID(key)] = {
+                            key=frameKey, 
+                            unitName=UnitName(key), 
+                            unitIDs={[key]=""}, 
+                            isPriority=true,
+                        }
+                    end
+                end
+            end
+        end
+    end
+
+    -- Skip a label
+    if (j > 6 and nextPlayerGroupKey > 2) or (j <= 6 and nextPlayerGroupKey > 1) then
+        local labelKey = "label" .. nextGroupKey%10
+        if labelKey == "label0" then labelKey = "label10"; end
+        discoVars.discoMainFrame.groupLabels[labelKey]:Hide()
+        nextGroupKey = nextGroupKey + 1
+    end
+
+    -- Find all regular party members
+    for _, key in pairs(allPartyMembersSorted) do
         if not string.find(key, "pet") then
+            local unitIndex = UnitInRaid(key)
+            local unitGroup
+            if unitIndex then
+                unitGroup = (select(3, GetRaidRosterInfo(unitIndex)))
+            end
             if discoVars.playerMapping[UnitGUID(key)] then
                 discoVars.playerMapping[UnitGUID(key)].unitIDs[key] = ""
             else
                 local frameKey = k
-                if DiscoSettings.arrangeByGroup then
-                    local unitIndex = UnitInRaid(key)
-                    local unitGroup = (select(3, GetRaidRosterInfo(unitIndex)))
+                if DiscoSettings.arrangeByGroup and unitGroup then
                     if groupKeys[unitGroup] then
                         frameKey = groupKeys[unitGroup]
                         groupKeys[unitGroup] = groupKeys[unitGroup] + 10
@@ -481,15 +702,16 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
                         discoVars.discoMainFrame.groupLabels[labelKey]:SetText("Grp " .. unitGroup)
                         discoVars.discoMainFrame.groupLabels[labelKey]:Show()
                     end
+                    --end
                 else
                     k=k+1
                 end
 
                 maxStrLength = DiscoSettings.frameSize * 5
                 nameSubStr = string.sub(UnitName(key), 0, maxStrLength)
-                subframes[frameKey].text:SetText(nameSubStr)
-
-                discoVars.playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
+                --subframes[frameKey].text:SetText(nameSubStr)
+                overlayFrames[frameKey].nameText:SetText(nameSubStr)
+                discoVars.playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}, isPriority=(unitGroup == playerGroup and DiscoSettings.prioritizeGroup)}
             end
         else
             pets[#pets+1] = key
@@ -499,7 +721,8 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
     -- Find all Pets
     if DiscoSettings.showPets and #pets > 0 then
         local nextPetGroupKey = nextGroupKey
-        local labelKey = "label" .. nextGroupKey
+        local labelKey = "label" .. nextGroupKey%10
+        if labelKey == "label0" then labelKey = "label10"; end
         nextGroupKey = nextGroupKey + 1
         groupKeys[9] = nextPetGroupKey
         discoVars.discoMainFrame.groupLabels[labelKey]:SetText("Pets")
@@ -510,7 +733,7 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
                 discoVars.playerMapping[UnitGUID(key)].unitIDs[key] = ""
             else
                 local petName = UnitName(key)
-                if petName then
+                if petName and k < 61 and nextPetGroupKey < 61 then
                     local frameKey = k
                     if DiscoSettings.arrangeByGroup then
                         frameKey = nextPetGroupKey
@@ -521,7 +744,8 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
                     end
                     maxStrLength = DiscoSettings.frameSize * 5
                     nameSubStr = string.sub(petName, 0, maxStrLength)
-                    subframes[frameKey].text:SetText(nameSubStr)
+                    --subframes[frameKey].text:SetText(nameSubStr)
+                    overlayFrames[frameKey].nameText:SetText(nameSubStr)
                     discoVars.playerMapping[UnitGUID(key)] = {key=frameKey, unitName=UnitName(key), unitIDs={[key]=""}}
                 end
             end
@@ -529,7 +753,7 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
     end
 
     -- Show/hide labels
-    if DiscoSettings.arrangeByGroup then
+    if DiscoSettings.arrangeByGroup and not DiscoSettings.minimized then
         mainframe.groupLabels:Show()
     else
         mainframe.groupLabels:Hide()
@@ -550,8 +774,11 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
             subframes[unitID] = subframes[unitGuid]
             local classFilename, classId = UnitClassBase(unitID)
             local classRGB = getClassColorRGB(classFilename)
+            setSubframeValues(subframes[v.key], unitID)
             subframes[v.key].classTexture:SetColorTexture(classRGB.r, classRGB.g, classRGB.b)
-            subframes[v.key].text:SetTextColor(classRGB.r, classRGB.g, classRGB.b)
+            --subframes[v.key].text:SetTextColor(classRGB.r, classRGB.g, classRGB.b)
+            local alpha = overlayFrames[v.key].nameText:GetAlpha()
+            overlayFrames[v.key].nameText:SetTextColor(classRGB.r, classRGB.g, classRGB.b, alpha)
             -- Set Attributes
             subframes[v.key].leftClick:SetScript("OnEnter", function() discoVars.mouseOverTarget = unitID; end)
             subframes[v.key].leftClick:SetScript("OnLeave", function() discoVars.mouseOverTarget = nil; overlayFrames[v.key].arrow:SetAlpha(0); end)
@@ -584,7 +811,11 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
         local groupSlotsUsed = {}
         for i=1, 10 do
             if groupKeys[i] then
-                groupSlotsUsed[groupKeys[i]%10] = groupKeys[i]
+                local groupSlot = groupKeys[i]%10
+                if groupSlot == 0 then
+                    groupSlot = 10
+                end
+                groupSlotsUsed[groupSlot] = groupKeys[i]
             end
         end
         for i=1, 10 do
@@ -603,6 +834,12 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
             overlayFrames[i]:Hide()
         end
     end
+    -- Hide all unused group prio frames
+    for i=nextPlayerGroupKey, 6 do
+        local pGroupKey = "group" .. i
+        subframes[pGroupKey]:Hide()
+        overlayFrames[pGroupKey]:Hide()
+    end
     -- Hide first row of subframes
     if j > 6 then
         for i=1, 10 do
@@ -610,10 +847,15 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
             overlayFrames[i]:Hide()
         end
     end
+    
     -- Hide unused labels
-    for i=nextGroupKey, 10 do
-        local labelKey = "label" .. i
-        discoVars.discoMainFrame.groupLabels[labelKey]:Hide()
+    if nextGroupKey < 11 then
+        local i = nextGroupKey%10
+        if i == 0 then i = 10; end
+        for i=i, 10 do
+            local labelKey = "label" .. i
+            discoVars.discoMainFrame.groupLabels[labelKey]:Hide()
+        end
     end
     -- Hide unused large frames
     for i=j, 10 do
@@ -626,25 +868,7 @@ function recreateAllSubFrames(subframes, overlayFrames, mainframe, allPartyMembe
         overlayFrames[playerTarget]:target()
     end
 
-    resizeMainFrame(k, j, mainframe, groupKeys)
-end
-
--- Reassign macro attributes
--- TODO: currently unused
-function reassignAttributes(subframes, overlayFrames, playerMapping)
-    -- Update frames for playerMapping
-    for unitGuid, v in pairs(playerMapping) do
-        for unitID, _ in pairs(v.unitIDs) do
-            subframes[v.key].leftClick:SetAttribute("unit", unitID)
-            if DiscoSettings.clickAction == "target" then
-                subframes[v.key].leftClick:SetAttribute("type", "target")
-            elseif DiscoSettings.clickAction == "spell" then
-                subframes[v.key].leftClick:SetAttribute("type", "macro")
-                local macroText = generateMacroText(unitID)
-                subframes[v.key].leftClick:SetAttribute("macrotext", macroText)
-            end
-        end
-    end
+    resizeMainFrame(k, j, mainframe, groupKeys, nextPlayerGroupKey)
 end
 
 -- Create Macro Text for frames
@@ -683,18 +907,49 @@ function generateMacroText(targetID)
     end
 
     if DiscoSettings.shiftRMacro == "target" then
-        macroText = macroText .. "/target [@" .. targetName .. ",btn:2,modifier:shift];"
+        macroText = macroText .. "/target [@" .. targetName .. ",btn:2,modifier:shift];\n"
     else
-        macroText = macroText .. "/cast [@" .. targetName .. ",help,exists,nodead,btn:2,modifier:shift] " .. DiscoSettings.shiftRMacro .. ";"
+        macroText = macroText .. "/cast [@" .. targetName .. ",help,exists,nodead,btn:2,modifier:shift] " .. DiscoSettings.shiftRMacro .. ";\n"
+    end
+
+    if DiscoSettings.altLMacro == "target" then
+        macroText = macroText .. "/target [@" .. targetName .. ",btn:1,modifier:alt];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetName .. ",help,exists,nodead,btn:1,modifier:alt] " .. DiscoSettings.altLMacro .. ";\n"
+    end
+
+    if DiscoSettings.altRMacro == "target" then
+        macroText = macroText .. "/target [@" .. targetName .. ",btn:2,modifier:alt];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetName .. ",help,exists,nodead,btn:2,modifier:alt] " .. DiscoSettings.altRMacro .. ";\n"
+    end
+    
+    if DiscoSettings.scrollClickMacro == "target" then
+        macroText = macroText .. "/target [@" .. targetName .. ",btn:3,nomodifier];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetName .. ",help,exists,nodead,btn:3,nomodifier] " .. DiscoSettings.scrollClickMacro .. ";\n"
+    end
+
+    if DiscoSettings.mb4Macro == "target" then
+        macroText = macroText .. "/target [@" .. targetName .. ",btn:4,nomodifier];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetName .. ",help,exists,nodead,btn:4,nomodifier] " .. DiscoSettings.mb4Macro .. ";\n"
+    end
+
+    if DiscoSettings.mb5Macro == "target" then
+        macroText = macroText .. "/target [@" .. targetName .. ",btn:5,nomodifier];\n"
+    else
+        macroText = macroText .. "/cast [@" .. targetName .. ",help,exists,nodead,btn:5,nomodifier] " .. DiscoSettings.mb5Macro .. ";\n"
     end
 
     return macroText
 end
 
+-- Called when minimize frames clicked
 function minimizeFrames(mainframe, subframes, overlayFrames)
     local fs = DiscoSettings.frameSize
 
-    for i=1, 40 do
+    for i=1, 60 do
         subframes[i]:Hide()
         overlayFrames[i]:Hide()
     end
@@ -702,35 +957,54 @@ function minimizeFrames(mainframe, subframes, overlayFrames)
         subframes["large" .. i]:Hide()
         overlayFrames["large" .. i]:Hide()
     end
+    for i=1, 6 do
+        subframes["group" .. i]:Hide()
+        overlayFrames["group" .. i]:Hide()
+    end
     
+    mainframe.groupLabels:Hide()
     mainframe:SetSize(100*fs, 28*fs)
 end
 
 -- Resize the main DiscoHealer frame
-function resizeMainFrame(nextFrameSmall, nextFrameLarge, mainframe, groups)
+function resizeMainFrame(nextFrameSmall, nextFrameLarge, mainframe, groups, nextPlayerGroupKey)
     local fs = DiscoSettings.frameSize
     local subframeHeight = (math.ceil((nextFrameSmall-1)/10) * 26)
     local subframeWidth = math.min(500, 50*(nextFrameSmall-1))
 
     if DiscoSettings.arrangeByGroup == true then
         local maxHeight = 0
+        local numGroups = 0
         for k,v in pairs(groups) do
+            numGroups = numGroups + 1
             if v and v > maxHeight then
                 maxHeight = v
             end
         end
+        if maxHeight > 1 then
+            maxHeight = maxHeight - 1
+        end
         subframeHeight = ((math.floor(maxHeight/10)) * 26 + 15)
-        --print((math.floor(maxHeight/10)))
-        subframeWidth = #groups * 50
+        subframeWidth = numGroups * 50
+
+        -- Don't leave extra space if labels are hidden
+        if math.floor(maxHeight/10) < 1 then
+            subframeHeight = subframeHeight - 15
+        end
+
+        -- Add extra space if wide group prio frames are used
+        if nextPlayerGroupKey > 1 then
+            subframeWidth = subframeWidth + 50
+        end
     end
 
+    -- subframe k starts at second row
     if nextFrameLarge > 6 then
         subframeHeight = subframeHeight - 25
     end
 
     local frameWidth = math.max(math.min(100*(nextFrameLarge-1), 500), subframeWidth) * fs
     local frameHeight = (27 * math.ceil((nextFrameLarge-1)/5) + subframeHeight) * fs
-    --print(math.ceil((nextFrameLarge-1)/5))
 
     if DiscoSettings.minimized then
         mainframe:SetSize(100*fs, 28*fs)

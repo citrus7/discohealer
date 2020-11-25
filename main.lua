@@ -2,11 +2,12 @@
 -- Use Healcomm HasHealed to blacklist estimated healers
 -- Minimize doesn't hide prio members and group labels
 -- Size scaling is off
--- Threat not disappearing
+-- Threat not disappearing due to frames changing before threat expired
+-- debug slash commands
+-- frames that still need attention should fade out
+-- players with boss threat should always be shown
 -- DONE
--- add button to lock ui
--- fix incorrect post player healing bar
--- fixed certain settings reverting after reload
+
 local addonName, discoVars = ...
 
 -- Testing
@@ -14,6 +15,15 @@ SLASH_DISCO2 = "/disco_list_tracked"
 SlashCmdList["DISCO"] = function(msg)
     HealEstimator:ListTrackedHealers()
 end
+--[[
+SLASH_DISCO3 = "/disco_threat"
+local testThreat = {}
+SlashCmdList["DISCO"] = function(msg)
+    for guid, val in pairs(testThreat) do
+        print(guid, val)
+    end
+end
+]]
  -- End Testing
 
 local HealComm = LibStub("LibHealComm-4.0", true)
@@ -231,7 +241,9 @@ local function updateHealthForUID(unitGUID, unitID, subframes, overlayFrames, pr
 
     local playerHealAmount = prePlayerHealAmount + (HealComm:GetHealAmount(unitGUID, HealComm.ALL_HEALS, playerTimer, UnitGUID("player")) or 0) * healModifier
     
+    -- Calculate unit's priority
     local newPriority = (1 - (totalOtherHealAmount + unitHealth) / maxHealth) * 1000
+
     -- Full health or mind controlled
     if newPriority < 1 or playerInfo.isMindControlled or not playerInfo.inRange then
         newPriority = 0
@@ -364,7 +376,7 @@ local function UpdateCastBar(castbar)
 end
 ]]
 
--- startCastBar plays a castbar animation
+-- UpdateCastBar changes a castbar to a different percent (usually from knockback)
 local function UpdateCastBar(castBarFrame, currentPercent, remainingCastTime)
     local fs = DiscoSettings.frameSize or 1
     castBarFrame.castAnimationGroup.castbar:SetSize(currentPercent * castBarFrame.size * fs, 25*fs)
@@ -394,7 +406,7 @@ end
 local function removeExpiredThreat(overlayFrames, unitThreatList)
     for guid, val in pairs(unitThreatList) do
         if (GetTime() - val.timestamp) > 3 then
-            removeThreat(guid, overlayFrames, unitThreatList)
+            removeThreat(guid, discoVars.discoOverlaySubframes, unitTargetList, discoVars.playerMapping)
         end
     end
 end
@@ -408,16 +420,14 @@ local function updateTargetedList(enemyID, overlayFrames, unitThreatList)
     local enemyGUID = UnitGUID(enemyID)
     local targetedFriendlyGUID = UnitGUID(enemyID .. "target")
 
-    -- Enemy target has changed
-    if unitThreatList[enemyGUID] and unitThreatList[enemyGUID].threatGuid ~= targetedFriendlyGUID then
-        overlayFrames[unitThreatList[enemyGUID].threatGuid].threatFrame:SetAlpha(0)
-        overlayFrames[unitThreatList[enemyGUID].threatGuid].bossThreatFrame:SetAlpha(0)
-        discoVars.playerMapping[unitThreatList[enemyGUID].threatGuid].isBossTarget = false
+    -- Enemy target has changed, hide original target
+    if unitThreatList[enemyGUID] and unitThreatList[enemyGUID].threatGUID ~= targetedFriendlyGUID then
+        removeThreat(enemyGUID, discoVars.discoOverlaySubframes, unitTargetList, discoVars.playerMapping)
     end
 
     --if targetedFriendlyGUID and overlayFrames[targetedFriendlyGUID] then
     if targetedFriendlyGUID and discoVars.playerMapping[targetedFriendlyGUID] then
-        unitThreatList[enemyGUID] = {enemyName=UnitName(enemyID), friendlyName=UnitName(enemyID.."target"), threatGuid=targetedFriendlyGUID, timestamp=GetTime()}
+        unitThreatList[enemyGUID] = {enemyName=UnitName(enemyID), friendlyName=UnitName(enemyID.."target"), threatGUID=targetedFriendlyGUID, timestamp=GetTime()}
         if UnitClassification(enemyID) ~= "worldboss" then
             overlayFrames[targetedFriendlyGUID].threatFrame:SetAlpha(0.75)
         else
@@ -562,6 +572,7 @@ local function main()
     -- Player mapping is GUID to {key, unitName, unitIDs = {unitID}}
     discoVars.playerMapping = {}
     unitTargetList = {}
+    testThreat = unitTargetList
     unitTargetThrottle = 0
     priorityList = {}
     healcommCallbacks = {}
@@ -717,7 +728,7 @@ local function main()
             HealEstimator:CancelHeal(sourceGUID)
         ]]
         elseif subevent == "UNIT_DIED" then
-            removeThreat(destGUID, discoVars.discoOverlaySubframes, unitTargetList)
+            removeThreat(destGUID, discoVars.discoOverlaySubframes, unitTargetList, discoVars.playerMapping)
         end
     end
 

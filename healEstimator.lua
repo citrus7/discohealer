@@ -74,6 +74,7 @@ function HealEstimator:GetTrackedHealer(unitGUID)
 end
 
 function HealEstimator:ListTrackedHealers()
+    print("list tracked")
     for unitGUID, val in pairs(trackedHealers) do
         local localizedClass, englishClass, localizedRace, englishRace, sex, name, realm = GetPlayerInfoByGUID(unitGUID)
         print(name, " accuracy: ", val.correct / val.attempted, " total: ", val.attempted)
